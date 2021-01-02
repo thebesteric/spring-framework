@@ -33,7 +33,7 @@ public class App {
 	@MapperScan("com.sourceflag.spring.mybatis")
 	public static class Config {
 
-		@Bean
+		// @Bean
 		public MapperScannerConfigurer mapperScannerConfigurer(){
 			MapperScannerConfigurer configurer = new MapperScannerConfigurer();
 			configurer.setBasePackage("com.sourceflag.spring.mybatis");
