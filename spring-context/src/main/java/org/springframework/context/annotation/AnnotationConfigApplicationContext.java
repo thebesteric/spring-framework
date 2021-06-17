@@ -55,8 +55,10 @@ import org.springframework.util.Assert;
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
+	// 完成 Spring 内部的 beanDefinition 的注册
 	private final AnnotatedBeanDefinitionReader reader;
 
+	// 类路径下的 bean 扫描器
 	private final ClassPathBeanDefinitionScanner scanner;
 
 
@@ -66,8 +68,27 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext() {
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
+		// ★★★ 解析配置类，就是加了 @Configuration 的类，如 AppConfig.class，在 spring 内部，就是这个作用
+		// AnnotationConfigApplicationContext 是 GenericApplicationContext 的子类，所以再 new AnnotationConfigApplicationContext() 同时，也实例化了 GenericApplicationContext
+		// BeanFactory 对象: DefaultListableBeanFactory，在父类对象 GenericApplicationContext 中
+		// 同样也可以解析 GenericBeanDefinition 的类，因为 AnnotatedBeanDefinitionReader 继承了 GenericBeanDefinition
+		// 相当于 AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
+		// 提供一个 reader 出来，这么做是为了可以做到动态加载，即提供一个 API 给外部使用
+		// ★★★ 同时还会将 Spring 所需要的一些内部的（必须的重要的） BD 放到 beanDefinitionMap 中
+		// ★★★ 1、internalConfigurationClassPostProcessor，负责解析配置类
+		// 2、internalAutowiredAnnotationBeanPostProcessor
+		// 3、internalCommonAnnotationBeanPostProcessor
+		// 4、internalEventListenerProcessor：处理 @EventListener 的类
+		// 5、internalEventListenerFactory
+		// 6、internalPersistenceAnnotationProcessor（是否启动 JPA）
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		createAnnotatedBeanDefReader.end();
+
+		// this.scanner 提供了动态扫描注解（是给外部使用的，Spring 内部并没有使用该类）
+		// ★★★ 同时还注册了两个默认的 defaultFilters，一个是 ComponentFilter，一个是 ManagedBeanFilter
+		// this.scanner.registerBeanDefinition();
+		// 可以再扩展 spring 的时候用，比如扩展注解，让 spring 进行扫描
+		// scanner：根据一个路径，将符合条件的类解析成 BD
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -88,8 +109,18 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		// 1、调用无参构造方法，创建 BeanFactory，也就是 public GenericApplicationContext()
+		// 2、生成 this.reader = new AnnotatedBeanDefinitionReader(this); 同时还会将 Spring 所需要的一些内部的（必须的重要的）BD 放到 beanDefinitionMap 中
+		// 3、生成 this.scanner = new ClassPathBeanDefinitionScanner(this); 创建一个扫描器
 		this();
+
+		// ★★★ 利用 reader 把 componentClasses（AppConfig） 解析为一个 BD，放入 beanDefinitionMap 中，此时 map 中至少有 6 个 BD，最多有 7 个 BD
+		// setAllowCircularReferences(false);
+		// 注册配置类，因为配置类需要解析，一般不需要自己扫描
+		// beanDefinitionMap.put("appConfig", AppConfig.class);
 		register(componentClasses);
+
+		// 调用 AbstractApplicationContext 的 refresh 方法，模板模式，会启动 ApplicationContext
 		refresh();
 	}
 
@@ -165,6 +196,9 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		Assert.notEmpty(componentClasses, "At least one component class must be specified");
 		StartupStep registerComponentClass = this.getApplicationStartup().start("spring.context.component-classes.register")
 				.tag("classes", () -> Arrays.toString(componentClasses));
+		// 这里其实就是：AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
+		// 并注册到 beanDefinitionMap 中去：BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
+		// 简单的说就是把配置类解析成 BD 并进行注册
 		this.reader.register(componentClasses);
 		registerComponentClass.end();
 	}
@@ -182,6 +216,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		StartupStep scanPackages = this.getApplicationStartup().start("spring.context.base-packages.scan")
 				.tag("packages", () -> Arrays.toString(basePackages));
+		// 扫描 指定包 下的所有符合 spring 规则的类
 		this.scanner.scan(basePackages);
 		scanPackages.end();
 	}

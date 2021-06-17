@@ -109,7 +109,7 @@ public class EventListenerMethodProcessor
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
-
+		// 获取到 DefaultEventListenerFactory
 		Map<String, EventListenerFactory> beans = beanFactory.getBeansOfType(EventListenerFactory.class, false, false);
 		List<EventListenerFactory> factories = new ArrayList<>(beans.values());
 		AnnotationAwareOrderComparator.sort(factories);
@@ -121,6 +121,7 @@ public class EventListenerMethodProcessor
 	public void afterSingletonsInstantiated() {
 		ConfigurableListableBeanFactory beanFactory = this.beanFactory;
 		Assert.state(this.beanFactory != null, "No ConfigurableListableBeanFactory set");
+		// 获取所有的 beanName
 		String[] beanNames = beanFactory.getBeanNamesForType(Object.class);
 		for (String beanName : beanNames) {
 			if (!ScopedProxyUtils.isScopedTarget(beanName)) {
@@ -151,6 +152,7 @@ public class EventListenerMethodProcessor
 						}
 					}
 					try {
+						// ★★★ 处理含有 @EventListener 方法的 bean
 						processBean(beanName, type);
 					}
 					catch (Throwable ex) {
@@ -169,6 +171,7 @@ public class EventListenerMethodProcessor
 
 			Map<Method, EventListener> annotatedMethods = null;
 			try {
+				// 查找获取有 @EventListener 注解的方法
 				annotatedMethods = MethodIntrospector.selectMethods(targetType,
 						(MethodIntrospector.MetadataLookup<EventListener>) method ->
 								AnnotatedElementUtils.findMergedAnnotation(method, EventListener.class));
@@ -195,12 +198,15 @@ public class EventListenerMethodProcessor
 				for (Method method : annotatedMethods.keySet()) {
 					for (EventListenerFactory factory : factories) {
 						if (factory.supportsMethod(method)) {
+							// 获取 @EventListener 的方法
 							Method methodToUse = AopUtils.selectInvocableMethod(method, context.getType(beanName));
+							// 创建事件监听器，并绑定上 @EventListener 的方法
 							ApplicationListener<?> applicationListener =
 									factory.createApplicationListener(beanName, targetType, methodToUse);
 							if (applicationListener instanceof ApplicationListenerMethodAdapter) {
 								((ApplicationListenerMethodAdapter) applicationListener).init(context, this.evaluator);
 							}
+							// 加入到容器中的监听器列表中
 							context.addApplicationListener(applicationListener);
 							break;
 						}

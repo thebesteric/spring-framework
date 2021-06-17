@@ -130,12 +130,16 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
+		// 判断当前多播器是否为异步多播器
 		Executor executor = getTaskExecutor();
+		// 获取多播器中所有的监听器
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
 			if (executor != null) {
+				// 异步发送
 				executor.execute(() -> invokeListener(listener, event));
 			}
 			else {
+				// 同步发送
 				invokeListener(listener, event);
 			}
 		}
@@ -169,6 +173,8 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void doInvokeListener(ApplicationListener listener, ApplicationEvent event) {
 		try {
+			// 1、接口方式会直接调用监听器的 onApplicationEvent 方法
+			// 2、注解版的会直接调用 ApplicationListenerMethodAdapter 的 onApplicationEvent 方法
 			listener.onApplicationEvent(event);
 		}
 		catch (ClassCastException ex) {

@@ -915,13 +915,20 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// 从容器中获取所有 beanDefinition 的名称
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
+		// 循环所有非懒加载的单例 bean
 		for (String beanName : beanNames) {
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+
+			// 不能是抽象的，必须是单例与非懒加载的
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+
+				// 是不是工厂 bean
 				if (isFactoryBean(beanName)) {
+					// 如果是工厂 bean，则加 & 前缀
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -940,15 +947,21 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						}
 					}
 				}
+				// 非工厂 bean
 				else {
+					// ★★★ 开始实例化 bean
 					getBean(beanName);
 				}
 			}
 		}
 
+		// 到这里所有的单例 bean 都已经加载结束了
+
 		// Trigger post-initialization callback for all applicable beans...
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
+			// 调用实现了 SmartInitializingSingleton 接口的 bean 的 afterSingletonsInstantiated 方法
+			// ★★★ 其中 EventListenerMethodProcessor 就实现了 SmartInitializingSingleton，会在这里进行调用
 			if (singletonInstance instanceof SmartInitializingSingleton) {
 				StartupStep smartInitialize = this.getApplicationStartup().start("spring.beans.smart-initialize")
 						.tag("beanName", beanName);
@@ -990,6 +1003,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
+		// 出现重复
 		if (existingDefinition != null) {
 			if (!isAllowBeanDefinitionOverriding()) {
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
@@ -1016,11 +1030,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
+			// 后者覆盖前者
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
+				// 加入到 beanDefinitionMap 中
 				synchronized (this.beanDefinitionMap) {
 					this.beanDefinitionMap.put(beanName, beanDefinition);
 					List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);

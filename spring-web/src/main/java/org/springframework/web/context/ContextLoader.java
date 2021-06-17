@@ -140,6 +140,8 @@ public class ContextLoader {
 		// This is currently strictly internal and not meant to be customized
 		// by application developers.
 		try {
+			// 去查找 ContextLoader.properties 所配置的容器类型
+			// org.springframework.web.context.WebApplicationContext = org.springframework.web.context.support.XmlWebApplicationContext
 			ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, ContextLoader.class);
 			defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
 		}
@@ -259,6 +261,7 @@ public class ContextLoader {
 	 * @see #CONFIG_LOCATION_PARAM
 	 */
 	public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
+		// 是否存在父容器，如果已经存在父容器了，则抛出异常
 		if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
 			throw new IllegalStateException(
 					"Cannot initialize context because there is already a root application context present - " +
@@ -276,6 +279,7 @@ public class ContextLoader {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
 			if (this.context == null) {
+				// ★★★ 创建容器：XmlWebApplicationContext
 				this.context = createWebApplicationContext(servletContext);
 			}
 			if (this.context instanceof ConfigurableWebApplicationContext) {
@@ -286,9 +290,11 @@ public class ContextLoader {
 					if (cwac.getParent() == null) {
 						// The context instance was injected without an explicit parent ->
 						// determine parent for root web application context, if any.
+						// 一个空实现，并没有父容器
 						ApplicationContext parent = loadParentContext(servletContext);
 						cwac.setParent(parent);
 					}
+					// ★★★ 刷新容器
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
@@ -329,6 +335,7 @@ public class ContextLoader {
 	 * @see ConfigurableWebApplicationContext
 	 */
 	protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
+		// ★★★ 决定 contextClass 的类型
 		Class<?> contextClass = determineContextClass(sc);
 		if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
 			throw new ApplicationContextException("Custom context class [" + contextClass.getName() +
@@ -346,6 +353,7 @@ public class ContextLoader {
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext
 	 */
 	protected Class<?> determineContextClass(ServletContext servletContext) {
+		// 是否指定了容器的 class 类型：XmlWebApplicationContext
 		String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM);
 		if (contextClassName != null) {
 			try {
@@ -356,7 +364,9 @@ public class ContextLoader {
 						"Failed to load custom context class [" + contextClassName + "]", ex);
 			}
 		}
+		// ★★★ 没有指定 contextClass
 		else {
+			// 找到默认的 class 类型：XmlWebApplicationContext
 			contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
 			try {
 				return ClassUtils.forName(contextClassName, ContextLoader.class.getClassLoader());
@@ -372,18 +382,26 @@ public class ContextLoader {
 		if (ObjectUtils.identityToString(wac).equals(wac.getId())) {
 			// The application context id is still set to its original default value
 			// -> assign a more useful id based on available information
+			// 如果指定了容器 ID
 			String idParam = sc.getInitParameter(CONTEXT_ID_PARAM);
 			if (idParam != null) {
 				wac.setId(idParam);
 			}
 			else {
 				// Generate default id...
+				// 创建一个默认的容器 ID
 				wac.setId(ConfigurableWebApplicationContext.APPLICATION_CONTEXT_ID_PREFIX +
 						ObjectUtils.getDisplayString(sc.getContextPath()));
 			}
 		}
-
+		// ★ 将 Spring 的上下文与 tomcat 的上下文联系到了一起
 		wac.setServletContext(sc);
+
+		// ★★★ 获取 contextConfigLocation 的值
+		// <context-param>
+		//     <param-name>contextConfigLocation</param-name>
+		//     <param-value>classpath:spring/spring.xml</param-value>
+		// </context-param>
 		String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
 		if (configLocationParam != null) {
 			wac.setConfigLocation(configLocationParam);
@@ -398,6 +416,8 @@ public class ContextLoader {
 		}
 
 		customizeContext(sc, wac);
+
+		// ★★★ 开始刷新容器
 		wac.refresh();
 	}
 

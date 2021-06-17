@@ -189,6 +189,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 	 * @throws ServletException if subclass initialization fails
 	 */
 	protected void initServletBean() throws ServletException {
+		// 会调用 FrameworkServlet 的 initServletBean()
 	}
 
 	/**

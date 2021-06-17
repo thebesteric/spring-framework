@@ -78,6 +78,7 @@ public abstract class TransactionSynchronizationManager {
 
 	private static final Log logger = LogFactory.getLog(TransactionSynchronizationManager.class);
 
+	// key = Datasource，value = 某个数据库的连接对象
 	private static final ThreadLocal<Map<Object, Object>> resources =
 			new NamedThreadLocal<>("Transactional resources");
 
@@ -136,7 +137,10 @@ public abstract class TransactionSynchronizationManager {
 	 */
 	@Nullable
 	public static Object getResource(Object key) {
+		// actualKey 就是 Datasource
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
+		// resource 是一个 ThreadLocal，表示线程中缓存的的某个 datasource 对应的数据库连接
+		// 从 resource 中获取蘑菇额数据库的连接
 		Object value = doGetResource(actualKey);
 		if (value != null && logger.isTraceEnabled()) {
 			logger.trace("Retrieved value [" + value + "] for key [" + actualKey + "] bound to thread [" +
@@ -150,6 +154,7 @@ public abstract class TransactionSynchronizationManager {
 	 */
 	@Nullable
 	private static Object doGetResource(Object actualKey) {
+		// resources = ThreadLocal<Map<Object, Object>>
 		Map<Object, Object> map = resources.get();
 		if (map == null) {
 			return null;
@@ -207,6 +212,7 @@ public abstract class TransactionSynchronizationManager {
 	 */
 	public static Object unbindResource(Object key) throws IllegalStateException {
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
+		// 从 resources 中移除当前数据源对应的数据库连接，然后返回数据库连接
 		Object value = doUnbindResource(actualKey);
 		if (value == null) {
 			throw new IllegalStateException(

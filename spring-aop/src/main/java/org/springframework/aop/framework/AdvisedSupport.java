@@ -228,6 +228,7 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 	@Override
 	public boolean isInterfaceProxied(Class<?> intf) {
 		for (Class<?> proxyIntf : this.interfaces) {
+			// intf 是否是 proxyIntf 的父类
 			if (intf.isAssignableFrom(proxyIntf)) {
 				return true;
 			}

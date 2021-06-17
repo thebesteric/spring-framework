@@ -107,8 +107,11 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 		if (config.getAdvisorCount() == 0 && config.getTargetSource() == AdvisedSupport.EMPTY_TARGET_SOURCE) {
 			throw new AopConfigException("No advisors and no TargetSource specified");
 		}
+		// advised 就是 ProxyFactory 对象
 		this.advised = config;
+		// 获取生成代理对象所需要实现的接口，同时还包括 Spring 自己添加的三个接口：SpringProxy，Advised，DecoratingProxy
 		this.proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(this.advised, true);
+		// 判断这些方法中有没有定义 equals 和 hashCode 方法
 		findDefinedEqualsAndHashCodeMethods(this.proxiedInterfaces);
 	}
 
@@ -123,6 +126,10 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 		if (logger.isTraceEnabled()) {
 			logger.trace("Creating JDK dynamic proxy: " + this.advised.getTargetSource());
 		}
+		// this.proxiedInterfaces: 获取生成代理对象所需要实现的接口
+		// this: 就是 JdkDynamicAopProxy，因为 JdkDynamicAopProxy 实现了 InvocationHandler
+		// 针对所指定的接口生成代理对象，包括用户所添加的接口以及 SpringProxy，Advised，DecoratingProxy
+		// 所以生成的代理对象可以强制转换为任一个接口类型
 		return Proxy.newProxyInstance(classLoader, this.proxiedInterfaces, this);
 	}
 
@@ -160,6 +167,8 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 		Object oldProxy = null;
 		boolean setProxyContext = false;
 
+		// 有值的话会是：SingletonTargetSource
+		// 无值的话会是：EmptyTargetSource
 		TargetSource targetSource = this.advised.targetSource;
 		Object target = null;
 
@@ -184,6 +193,8 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 
 			Object retVal;
 
+			// advised 就是 ProxyFactory
+			// @EnableAspectJAutoProxy(exposeProxy = true)，是否将当前代理对象暴露出来
 			if (this.advised.exposeProxy) {
 				// Make invocation available if necessary.
 				oldProxy = AopContext.setCurrentProxy(proxy);
@@ -192,10 +203,14 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 
 			// Get as late as possible to minimize the time we "own" the target,
 			// in case it comes from a pool.
+			// target 就是我们自己所设置的原始对象
 			target = targetSource.getTarget();
 			Class<?> targetClass = (target != null ? target.getClass() : null);
 
 			// Get the interception chain for this method.
+			// 获取当前方法对应的代理逻辑拦截器，如：MethodBeforeAdviceInterceptor
+			// 也就是我们通过 proxyFactory.addAdvice(...) 中的逻辑封装为 XXXAdviceInterceptor
+			// 或者我们在 @Aspect 中定义的 Advisor
 			List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 
 			// Check whether we have any advice. If we don't, we can fallback on direct
@@ -212,6 +227,7 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 				MethodInvocation invocation =
 						new ReflectiveMethodInvocation(proxy, target, method, args, targetClass, chain);
 				// Proceed to the joinpoint through the interceptor chain.
+				// ★★★ 执行代理逻辑
 				retVal = invocation.proceed();
 			}
 

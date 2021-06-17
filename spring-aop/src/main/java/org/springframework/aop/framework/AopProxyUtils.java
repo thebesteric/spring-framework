@@ -116,9 +116,12 @@ public abstract class AopProxyUtils {
 	 * @see DecoratingProxy
 	 */
 	static Class<?>[] completeProxiedInterfaces(AdvisedSupport advised, boolean decoratingProxy) {
+		// 找出类所实现的所有接口类型
 		Class<?>[] specifiedInterfaces = advised.getProxiedInterfaces();
+		// 如果没有指定任何接口
 		if (specifiedInterfaces.length == 0) {
 			// No user-specified interfaces: check whether target class is an interface.
+			// 就需要查看 targetClass 是不是接口，如果是则添加这个接口
 			Class<?> targetClass = advised.getTargetClass();
 			if (targetClass != null) {
 				if (targetClass.isInterface()) {
@@ -130,6 +133,7 @@ public abstract class AopProxyUtils {
 				specifiedInterfaces = advised.getProxiedInterfaces();
 			}
 		}
+		// ★★★ 除了用户自己添加的接口外，Spring 还需要添加三个默认的接口 SpringProxy，Advised，DecoratingProxy
 		boolean addSpringProxy = !advised.isInterfaceProxied(SpringProxy.class);
 		boolean addAdvised = !advised.isOpaque() && !advised.isInterfaceProxied(Advised.class);
 		boolean addDecoratingProxy = (decoratingProxy && !advised.isInterfaceProxied(DecoratingProxy.class));

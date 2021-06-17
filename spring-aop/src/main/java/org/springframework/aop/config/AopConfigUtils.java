@@ -58,8 +58,11 @@ public abstract class AopConfigUtils {
 
 	static {
 		// Set up the escalation list...
+		// 优先级 0：@EnableTransactionManagement 会组测这个 bean，优先级最低
 		APC_PRIORITY_LIST.add(InfrastructureAdvisorAutoProxyCreator.class);
+		// 优先级 1
 		APC_PRIORITY_LIST.add(AspectJAwareAdvisorAutoProxyCreator.class);
+		// 优先级 2：@EnableAspectJAutoProxy 会注册这个 bean，优先级最高
 		APC_PRIORITY_LIST.add(AnnotationAwareAspectJAutoProxyCreator.class);
 	}
 
@@ -96,7 +99,7 @@ public abstract class AopConfigUtils {
 	@Nullable
 	public static BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+		// 注册一个 AnnotationAwareAspectJAutoProxyCreator 的 BeanPostProcessor
 		return registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator.class, registry, source);
 	}
 
@@ -120,11 +123,13 @@ public abstract class AopConfigUtils {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 
+		// 是否包含 internalAutoProxyCreator 这个 beanName
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {
 				int currentPriority = findPriorityForClass(apcDefinition.getBeanClassName());
 				int requiredPriority = findPriorityForClass(cls);
+				// 选择优先级最高的
 				if (currentPriority < requiredPriority) {
 					apcDefinition.setBeanClassName(cls.getName());
 				}
@@ -132,6 +137,7 @@ public abstract class AopConfigUtils {
 			return null;
 		}
 
+		// ★★★ 将 AnnotationAwareAspectJAutoProxyCreator 封装为 BeanDefinition
 		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
 		beanDefinition.setSource(source);
 		beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);

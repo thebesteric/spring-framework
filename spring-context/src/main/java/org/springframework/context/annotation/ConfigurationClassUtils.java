@@ -121,10 +121,13 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		// 判断是不是一个完全的配置类，也就是是否有 @Configuration 注解标识
+		// 完全配置类会被 CGLIB 动态代理
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
+		// 这里判断是不是非正式的配置类，如 @Component，@ComponentScan，@Import，@ImportResource 或者含有 @Bean 注解的方法
 		else if (config != null || isConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}

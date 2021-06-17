@@ -5,10 +5,7 @@ import com.sourceflag.spring.transactional.service.UserService;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.*;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -32,12 +29,14 @@ public class App {
 
 
 		UserService userService = ctx.getBean(UserService.class);
-		userService.test();
+		userService.test2();
 	}
 
 	@Configuration
 	@ComponentScan("com.sourceflag.spring.transactional")
 	@MapperScan("com.sourceflag.spring.transactional.mapper")
+	// @EnableAspectJAutoProxy(proxyTargetClass = true)
+	@EnableAspectJAutoProxy(exposeProxy = true)
 	@EnableTransactionManagement // 开启事务
 	public static class Config {
 

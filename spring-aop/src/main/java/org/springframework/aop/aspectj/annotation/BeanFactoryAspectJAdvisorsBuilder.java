@@ -89,26 +89,36 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					// 拿到 BeanFactory 中所有的 beanName
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
+						// 是不是一个合格的 bean
 						if (!isEligibleBean(beanName)) {
 							continue;
 						}
 						// We must be careful not to instantiate beans eagerly as in this case they
 						// would be cached by the Spring container but would not have been weaved.
+						// 获取当前 bean 的类型
 						Class<?> beanType = this.beanFactory.getType(beanName, false);
 						if (beanType == null) {
 							continue;
 						}
+						// beanType 是不是一个切面，也就是有没有 @Aspect 注解
 						if (this.advisorFactory.isAspect(beanType)) {
+							// 是切面类，则加入到缓存中
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+								// 通过 beanName 生成一个工厂
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								// ★★★ 解析 Advisor，也就是解析 @Before、@After、@Around 这些注解
+								// 每一个 @Before、@After、@Around 都会封装成要给 Advisor
+								// 也就是说一个 Advisor 包括一个 advise 和一个 pointcut
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
 								if (this.beanFactory.isSingleton(beanName)) {
+									// 加入到缓存中：key 就是 beanName，advisor 就是定义的几个切面方法
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
 								else {
@@ -140,6 +150,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 		}
 		List<Advisor> advisors = new ArrayList<>();
 		for (String aspectName : aspectNames) {
+			// 从缓存中直接获取
 			List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName);
 			if (cachedAdvisors != null) {
 				advisors.addAll(cachedAdvisors);

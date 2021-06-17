@@ -228,7 +228,9 @@ public abstract class AbstractApplicationEventMulticaster
 		// Add programmatically registered listeners, including ones coming
 		// from ApplicationListenerDetector (singleton beans and inner beans).
 		for (ApplicationListener<?> listener : listeners) {
+			// 当前监听器是否正在监听当前事件
 			if (supportsEvent(listener, eventType, sourceType)) {
+				// 缓存不存在
 				if (retriever != null) {
 					filteredListeners.add(listener);
 				}
@@ -238,6 +240,7 @@ public abstract class AbstractApplicationEventMulticaster
 
 		// Add listeners by bean name, potentially overlapping with programmatically
 		// registered listeners above - but here potentially with additional metadata.
+		// 循环这个集合是防止有懒加载的监听器，没有 ApplicationListenerDetector 扫描到
 		if (!listenerBeans.isEmpty()) {
 			ConfigurableBeanFactory beanFactory = getBeanFactory();
 			for (String listenerBeanName : listenerBeans) {
@@ -467,9 +470,10 @@ public abstract class AbstractApplicationEventMulticaster
 	 * Helper class that encapsulates a general set of target listeners.
 	 */
 	private class DefaultListenerRetriever {
-
+		// 保存了所有的 Listener，包括：实现 ApplicationListener 接口和使用 @EventListener 的注解的
+		// 是通过 ApplicationListenerDetector 后置处理器来做的
 		public final Set<ApplicationListener<?>> applicationListeners = new LinkedHashSet<>();
-
+		// 只保存了实现 ApplicationListener 接口的 bean 名称
 		public final Set<String> applicationListenerBeans = new LinkedHashSet<>();
 
 		public Collection<ApplicationListener<?>> getApplicationListeners() {

@@ -60,6 +60,7 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 		boolean candidateFound = false;
 		Set<String> annTypes = importingClassMetadata.getAnnotationTypes();
 		for (String annType : annTypes) {
+			// 获取 @EnableTransactionManagement 注解的属性值
 			AnnotationAttributes candidate = AnnotationConfigUtils.attributesFor(importingClassMetadata, annType);
 			if (candidate == null) {
 				continue;
@@ -70,6 +71,8 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 					Boolean.class == proxyTargetClass.getClass()) {
 				candidateFound = true;
 				if (mode == AdviceMode.PROXY) {
+					// ★★★ 注册一个 InfrastructureAdvisorAutoProxyCreator 类型的 bean，用于处理事务
+					// 其实就是一个自动代理的创建器 AbstractAdvisorAutoProxyCreator
 					AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
 					if ((Boolean) proxyTargetClass) {
 						AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);

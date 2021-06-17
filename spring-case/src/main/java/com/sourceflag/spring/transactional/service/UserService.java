@@ -2,6 +2,7 @@ package com.sourceflag.spring.transactional.service;
 
 import com.sourceflag.spring.transactional.mapper.UserMapper;
 import com.sourceflag.spring.transactional.model.User;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -45,15 +46,19 @@ public class UserService {
 		userService.test3();
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRED)
 	public void test2() {
-		userMapper.insert2(new User("李四"));
-		userService.test3();
+		userMapper.insert2(new User("李四1"));
+		userMapper.insert2(new User("李四2"));
+		// userService.test3(); // 需要使用 CGLIB 动态代理
+		((UserService)AopContext.currentProxy()).test3(); // 需要暴露代理
+		throw new RuntimeException("some error in it");
 	}
 
+	// 挂起外部事务，开启一个新的事务
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void test3() {
-		userMapper.insert2(new User("李四"));
+		userMapper.insert2(new User("李四3"));
 	}
 
 	@Transactional(propagation = Propagation.NESTED)

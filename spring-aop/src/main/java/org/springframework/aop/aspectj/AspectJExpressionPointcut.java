@@ -195,6 +195,7 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		}
 		if (this.pointcutExpression == null) {
 			this.pointcutClassLoader = determinePointcutClassLoader();
+			// 创建切点表达式解析器
 			this.pointcutExpression = buildPointcutExpression(this.pointcutClassLoader);
 		}
 		return this.pointcutExpression;
@@ -218,6 +219,7 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 	 * Build the underlying AspectJ pointcut expression.
 	 */
 	private PointcutExpression buildPointcutExpression(@Nullable ClassLoader classLoader) {
+		// 创建切点解析器
 		PointcutParser parser = initializePointcutParser(classLoader);
 		PointcutParameter[] pointcutParameters = new PointcutParameter[this.pointcutParameterNames.length];
 		for (int i = 0; i < pointcutParameters.length; i++) {
@@ -269,9 +271,11 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 
 	@Override
 	public boolean matches(Class<?> targetClass) {
+		// 创建切点表达式解析器
 		PointcutExpression pointcutExpression = obtainPointcutExpression();
 		try {
 			try {
+				// 按类型筛选（初筛）
 				return pointcutExpression.couldMatchJoinPointsInType(targetClass);
 			}
 			catch (ReflectionWorldException ex) {
@@ -291,6 +295,7 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 
 	@Override
 	public boolean matches(Method method, Class<?> targetClass, boolean hasIntroductions) {
+		// 创建切点表达式解析器
 		obtainPointcutExpression();
 		ShadowMatch shadowMatch = getTargetShadowMatch(method, targetClass);
 

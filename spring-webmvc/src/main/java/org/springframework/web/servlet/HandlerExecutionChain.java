@@ -42,8 +42,10 @@ public class HandlerExecutionChain {
 
 	private static final Log logger = LogFactory.getLog(HandlerExecutionChain.class);
 
+	// 处理器
 	private final Object handler;
 
+	// 拦截器集合
 	private final List<HandlerInterceptor> interceptorList = new ArrayList<>();
 
 	private int interceptorIndex = -1;
@@ -146,6 +148,7 @@ public class HandlerExecutionChain {
 		for (int i = 0; i < this.interceptorList.size(); i++) {
 			HandlerInterceptor interceptor = this.interceptorList.get(i);
 			if (!interceptor.preHandle(request, response, this.handler)) {
+				// 如果前拦截执行失败，会触发拦截完成
 				triggerAfterCompletion(request, response, null);
 				return false;
 			}

@@ -194,6 +194,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 	public void processEvent(ApplicationEvent event) {
 		Object[] args = resolveArguments(event);
 		if (shouldHandle(event, args)) {
+			// 采用反射的方式进行调用
 			Object result = doInvoke(args);
 			if (result != null) {
 				handleResult(result);
@@ -309,6 +310,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 
 		ReflectionUtils.makeAccessible(this.method);
 		try {
+			// 采用反射的方式进行调用
 			return this.method.invoke(bean, args);
 		}
 		catch (IllegalArgumentException ex) {

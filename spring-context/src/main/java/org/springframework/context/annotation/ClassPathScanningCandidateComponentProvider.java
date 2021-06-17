@@ -203,9 +203,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
+		// 注册扫描 @Component 的过滤器
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
 		try {
+			// 扫描 JSR-250 规范 @ManagedBean
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
 			logger.trace("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
@@ -214,6 +216,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
 		try {
+			// 扫描 JSR-330 规范 @Named
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
 			logger.trace("JSR-330 'javax.inject.Named' annotation found and supported for component scanning");
@@ -312,6 +315,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
 		else {
+			// ★★★ 扫描候选 Component
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -415,8 +419,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
+			// 将 com.sourceflag.MyConfig 替换程 classpath*:com/sourceflag/MyConfig/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
+			// 扫描指定包路径下的所有 class 文件包装成 Resource
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
@@ -427,13 +433,21 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				if (resource.isReadable()) {
 					try {
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						// 是不是候选的，也就是是不是 excludeFilters 或 includeFilters 指定的
+						// ★★★ 其中 includeFilters 会默认注册一个 this.includeFilters.add(new AnnotationTypeFilter(Component.class)); 保证可以扫描到 @Component 注解的类
+						// excludeFilter 会执行前面注册的一段回调函数，排除注册类
 						if (isCandidateComponent(metadataReader)) {
+							// ★★★ 通过扫描出来的候选 bean 会是 ScannedGenericBeanDefinition 类型
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
+							// 设置 class 源路径
 							sbd.setSource(resource);
+							// ★★★ 是否是接口或者抽象类
+							// MyBatis 是一个接口，但是也能被扫描到，是应为重写了 isCandidateComponent 方法
 							if (isCandidateComponent(sbd)) {
 								if (debugEnabled) {
 									logger.debug("Identified candidate component class: " + resource);
 								}
+								// 加入候选集合中
 								candidates.add(sbd);
 							}
 							else {
@@ -486,11 +500,13 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return whether the class qualifies as a candidate component
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
+		// 排除的
 		for (TypeFilter tf : this.excludeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return false;
 			}
 		}
+		// 包含的
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return isConditionMatch(metadataReader);
@@ -523,6 +539,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
+		// 不是抽象类，如果是抽象类那么抽象类上必须有 @Lookup 注解
+		// metadata.isIndependent()：是否是一个顶级类、嵌套类、静态内部类（有效的）
+		// metadata.isConcrete()：非接口，非抽象类
+		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么并且必须有 @Lookup 注解
+		// @Lookup 可以结合抽象类一起用，保证原型
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));
 	}

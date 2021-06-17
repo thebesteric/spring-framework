@@ -163,9 +163,12 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		this.registry = registry;
 
 		if (useDefaultFilters) {
+			// 注册默认过滤器
 			registerDefaultFilters();
 		}
+		// 设置环境对象
 		setEnvironment(environment);
+		// 设置资源加载其
 		setResourceLoader(resourceLoader);
 	}
 
@@ -271,16 +274,22 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 */
 	protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
+		// 创建 BeanDefinitionHolder，用于保存扫描后的 bean 定义对象
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
+		// 循环包路径
 		for (String basePackage : basePackages) {
+			// ★★★ 找到候选的 Components
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+				// 生成 beanName
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+				// ★★★ 设置默认的一些 bean 定义，如 lazy，autowired-model，init-method，destroy-method
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+				// 获取 @Lazy，@Primary，@DependsOn 等属性
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
@@ -289,6 +298,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+					// ★ 注册到容器 beanDefinitionMap 中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

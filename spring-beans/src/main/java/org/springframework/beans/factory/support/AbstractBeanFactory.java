@@ -248,12 +248,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
 			throws BeansException {
-
+		// 这里传入的 name 可能是别名，通过别名找到真实的名称
 		String beanName = transformedBeanName(name);
 		Object beanInstance;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		// 从容器中获取，第一次的情况下，会返回 null
+		// ★★★★★ 开始循环依赖
+		// getSingleton() 中有一个参数：allowEarlyReference = true，是否应该创建早期引用，也是证明 spring 支持循环依赖的另一个证据
 		Object sharedInstance = getSingleton(beanName);
+
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -264,17 +268,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
+			// ★★★ 判断拿到的对象是不是一个 FactoryBean
+			// 如果是一个 FactoryBean 的话，就会调用 getObject 方法
+			// name 是外部传入的名字，beanName 是通过单例池拿到的名字
 			beanInstance = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
-
+		// ★★★ 单例池中不存在，则开始准备走 bean 的生命周期
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+			// 是否是原型 bean，即：@Scope("prototype")
+			// 原型 bean 如果出现循环依赖，直接抛出异常
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// Check if bean definition exists in this factory.
+			// ★ 检查是否有父工厂，尝试从父工厂里获取
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
@@ -296,7 +306,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
+			// typeCheckOnly 传入的为 false
 			if (!typeCheckOnly) {
+				// ★★★ 标识这个 bean 已经被创建过了
+				// 会从 mergedBeanDefinitions 中 remove 掉，同时添加到 alreadyCreated 中
 				markBeanAsCreated(beanName);
 			}
 
@@ -306,19 +319,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				if (requiredType != null) {
 					beanCreation.tag("beanType", requiredType::toString);
 				}
+				// ★★★ 得到合并后的 BeanDefinition
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
+				// ★★★ 处理 @DependsOn，保证先加载 dependOn 所依赖的 bean
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
+						// 检查是否发生了相互依赖，判断 beanName 是否也被 dep 所依赖了，如果是，就是相互依赖
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
 						registerDependentBean(dep, beanName);
 						try {
+							// ★★★ 生成所要 @DependsOn 的 bean，一个递归操作
 							getBean(dep);
 						}
 						catch (NoSuchBeanDefinitionException ex) {
@@ -329,9 +346,14 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 
 				// Create bean instance.
+				// ★★★ 检查完毕了所有的依赖关系，开始创建 bean
+				// ★★★ 如果是 singleton
 				if (mbd.isSingleton()) {
+					// 把 beanName 和一个 ObjectFactory 作为参数传入，用于回调
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							// ★★★ 关键代码：完成了目标对象的创建（创建 bean 实例）
+							// 如果需要代理，还完成了代理
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {
@@ -1774,12 +1796,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param beanName the name of the bean
 	 */
 	protected void markBeanAsCreated(String beanName) {
+		// 还没有被创建
 		if (!this.alreadyCreated.contains(beanName)) {
+			// 加锁
 			synchronized (this.mergedBeanDefinitions) {
+				// DCL 检查
 				if (!this.alreadyCreated.contains(beanName)) {
 					// Let the bean definition get re-merged now that we're actually creating
 					// the bean... just in case some of its metadata changed in the meantime.
+					// 从 mergedBeanDefinitions 删除 beanName，并在下次访问时重新创建
 					clearMergedBeanDefinition(beanName);
+					// 加入已创建的 alreadyCreated 集合中
 					this.alreadyCreated.add(beanName);
 				}
 			}
