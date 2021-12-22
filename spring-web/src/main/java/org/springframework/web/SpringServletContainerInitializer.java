@@ -150,6 +150,7 @@ public class SpringServletContainerInitializer implements ServletContainerInitia
 			for (Class<?> waiClass : webAppInitializerClasses) {
 				// Be defensive: Some servlet containers provide us with invalid classes,
 				// no matter what @HandlesTypes says...
+				// 不是接口，不是抽象类
 				if (!waiClass.isInterface() && !Modifier.isAbstract(waiClass.getModifiers()) &&
 						WebApplicationInitializer.class.isAssignableFrom(waiClass)) {
 					try {
@@ -171,6 +172,9 @@ public class SpringServletContainerInitializer implements ServletContainerInitia
 		servletContext.log(initializers.size() + " Spring WebApplicationInitializers detected on classpath");
 		AnnotationAwareOrderComparator.sort(initializers);
 		for (WebApplicationInitializer initializer : initializers) {
+			// ★★★ 如果是外置 tomcat 的话：
+			// 1、通过 AbstractDispatcherServletInitializer 完成 DispatcherServlet 的注册
+			// 2、通过 SpringBootServletInitializer 完成了对 main 方法对调用
 			initializer.onStartup(servletContext);
 		}
 	}
