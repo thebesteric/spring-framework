@@ -16,7 +16,6 @@ public class LoginListener implements ApplicationListener<LoginEvent> {
 	@Override
 	public void onApplicationEvent(LoginEvent event) {
 		LoginUser loginUser = (LoginUser) event.getSource();
-		System.out.println(loginUser);
-		System.out.println(Thread.currentThread().getName() + " LoginListener: " + event.getTimestamp());
+		System.out.println(Thread.currentThread().getName() + " LoginListener: " + loginUser + " = " + event.getTimestamp());
 	}
 }

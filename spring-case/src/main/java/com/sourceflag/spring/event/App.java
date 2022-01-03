@@ -1,8 +1,10 @@
 package com.sourceflag.spring.event;
 
 import com.sourceflag.spring.event.listener.LoginEvent;
+import com.sourceflag.spring.event.listener.LoginListener;
 import com.sourceflag.spring.event.listener.LoginUser;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -28,15 +30,18 @@ public class App {
 		ac.register(AppConfig.class);
 		ac.refresh();
 
-		// ac.addApplicationListener(new LoginListener());
+		ac.addApplicationListener(new LoginListener());
 
 		// SimpleApplicationEventMulticaster multicaster = ac.getBean(SimpleApplicationEventMulticaster.class);
 		// multicaster.setTaskExecutor(ac.getBean(ThreadPoolTaskExecutor.class));
+
+		// ApplicationEventPublisher publisher = ac.getBean(ApplicationEventPublisher.class);
 
 		LoginUser loginUser = new LoginUser(1, "eric");
 
 		LoginEvent loginEvent = new LoginEvent(loginUser, System.currentTimeMillis());
 		ac.publishEvent(loginEvent);
+		// publisher.publishEvent(loginEvent);
 		System.out.println(Thread.currentThread().getName() + " publish OVER");
 
 		// 发布 ContextStartedEvent

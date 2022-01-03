@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.beans.Introspector;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -32,6 +26,12 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
+
+import java.beans.Introspector;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link BeanNameGenerator} implementation for bean classes annotated with the
@@ -78,6 +78,7 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	@Override
 	public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
 		if (definition instanceof AnnotatedBeanDefinition) {
+			// 获取注解上的 beanName
 			String beanName = determineBeanNameFromAnnotation((AnnotatedBeanDefinition) definition);
 			if (StringUtils.hasText(beanName)) {
 				// Explicit bean name found.
@@ -105,7 +106,10 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 					Set<String> result = amd.getMetaAnnotationTypes(key);
 					return (result.isEmpty() ? Collections.emptySet() : result);
 				});
+				// 判断是否是：org.springframework.stereotype.Component
+				// 或 javax.annotation.ManagedBean，或 javax.inject.Named
 				if (isStereotypeWithNameValue(type, metaTypes, attributes)) {
+					// 在获取其 value 值作为 beanName
 					Object value = attributes.get("value");
 					if (value instanceof String) {
 						String strVal = (String) value;
@@ -120,6 +124,7 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 				}
 			}
 		}
+		// 如果没有在注解上指定，会返回 null
 		return beanName;
 	}
 
@@ -167,6 +172,8 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 		String beanClassName = definition.getBeanClassName();
 		Assert.state(beanClassName != null, "No bean class name set");
 		String shortClassName = ClassUtils.getShortName(beanClassName);
+		// 如果类的第一个字母和第二个字母都是大写，直接返回
+		// 其他情况返回首字母小写
 		return Introspector.decapitalize(shortClassName);
 	}
 

@@ -29,7 +29,7 @@ public class App {
 		ctx.register(Config.class);
 		ctx.refresh();
 
-		// ctx.scan();
+		ctx.scan();
 
 		SimpleCalculate simpleCalculate = (SimpleCalculate) ctx.getBean("simpleCalculate");
 		simpleCalculate.add(1, 2);

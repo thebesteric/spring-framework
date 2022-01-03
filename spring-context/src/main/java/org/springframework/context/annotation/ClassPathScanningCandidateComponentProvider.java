@@ -16,17 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.Lookup;
@@ -52,13 +43,13 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Indexed;
-import org.springframework.stereotype.Repository;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.*;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.util.*;
 
 /**
  * A component provider that provides candidate components from a base package. Can
@@ -311,11 +302,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return a corresponding Set of autodetected bean definitions
 	 */
 	public Set<BeanDefinition> findCandidateComponents(String basePackage) {
+		// META-INF/spring.components
+		// org.example.service.UserService=org.springframework.stereotype.Component
 		if (this.componentsIndex != null && indexSupportsIncludeFilters()) {
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
 		else {
 			// ★★★ 扫描候选 Component
+			// 此时返回的 BeanDefinition 中，只有 beanClass 和 metadata 有值
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -432,6 +426,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				}
 				if (resource.isReadable()) {
 					try {
+						// 元数据读取器
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
 						// 是不是候选的，也就是是不是 excludeFilters 或 includeFilters 指定的
 						// ★★★ 其中 includeFilters 会默认注册一个 this.includeFilters.add(new AnnotationTypeFilter(Component.class)); 保证可以扫描到 @Component 注解的类
@@ -507,8 +502,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			}
 		}
 		// 包含的
+		// includeFilters 会默认包含一个含有 @Component 注解的过滤器
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
+				// 是否有条件注解
 				return isConditionMatch(metadataReader);
 			}
 		}
@@ -540,9 +537,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
 		// 不是抽象类，如果是抽象类那么抽象类上必须有 @Lookup 注解
-		// metadata.isIndependent()：是否是一个顶级类、嵌套类、静态内部类（有效的）
+		// metadata.isIndependent()：是否是一个顶级类、静态内部类（有效的）
 		// metadata.isConcrete()：非接口，非抽象类
-		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么并且必须有 @Lookup 注解
+		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么必须要有 @Lookup 注解
 		// @Lookup 可以结合抽象类一起用，保证原型
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));
