@@ -16,31 +16,14 @@
 
 package org.springframework.util;
 
+import org.springframework.lang.Nullable;
+
 import java.beans.Introspector;
 import java.io.Closeable;
 import java.io.Externalizable;
 import java.io.Serializable;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-
-import org.springframework.lang.Nullable;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * Miscellaneous {@code java.lang.Class} utility methods.
@@ -188,17 +171,24 @@ public abstract class ClassUtils {
 	public static ClassLoader getDefaultClassLoader() {
 		ClassLoader cl = null;
 		try {
+			// 获取当前线程的类加载器
+			// 手动指定：Thread.currentThread().setContextClassLoader(classLoader);
 			cl = Thread.currentThread().getContextClassLoader();
 		}
 		catch (Throwable ex) {
 			// Cannot access thread context ClassLoader - falling back...
 		}
+
+		// 没有设置当前线程的类加载器
 		if (cl == null) {
 			// No thread context class loader -> use class loader of this class.
+			// 获取 ClassUtils.class 的类加载起，通常是 AppClassLoader
+			// 说明：有一种可能我们将 ClassUtils.class 所在的 jar 包，放到了 jre/lib 下，那么就会是 bootstrapClassLoader，所以这里会返回空
 			cl = ClassUtils.class.getClassLoader();
 			if (cl == null) {
 				// getClassLoader() returning null indicates the bootstrap ClassLoader
 				try {
+					// 兜底获取 AppClassLoader
 					cl = ClassLoader.getSystemClassLoader();
 				}
 				catch (Throwable ex) {

@@ -250,6 +250,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	public int scan(String... basePackages) {
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
+		// 开始扫描
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
@@ -281,6 +282,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
 				// 生成 beanName
+				// 如果类的第一个字母和第二个字母都是大写，直接返回，比如说有一个类是 ABTest，那么他的 beanName 也就是 ABTest
+				// 其他情况返回首字母小写
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 				// ★★★ 设置默认的一些 bean 定义，如 lazy，autowired-model，init-method，destroy-method
 				if (candidate instanceof AbstractBeanDefinition) {
@@ -292,6 +295,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				}
 				// 检查 beanDefinition 是否已经存在
 				if (checkCandidate(beanName, candidate)) {
+					// 将 BD 封装成一个 BeanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);

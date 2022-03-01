@@ -592,7 +592,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Instantiate all remaining (non-lazy-init) singletons.
 				// ★★★ IoC 的体现：开始实例化所有 非懒加载的单例 类，走了 validate 和 life 生命周期的两个步骤
-				// 这行代码执行完毕后，singletonObjects 里面就会有实例化好的对象实例
+				// 这行代码执行完毕后，完成了非懒加载的单例 bean 实例化，singletonObjects 里面就会有实例化好的对象实例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.

@@ -302,8 +302,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return a corresponding Set of autodetected bean definitions
 	 */
 	public Set<BeanDefinition> findCandidateComponents(String basePackage) {
-		// META-INF/spring.components
-		// org.example.service.UserService=org.springframework.stereotype.Component
+		// 建立 META-INF/spring.components
+		// 格式为：org.example.service.UserService=org.springframework.stereotype.Component
+		// 这样可以加快扫描的速度，但是注解 @Component 注解依然要加在对应的类上
 		if (this.componentsIndex != null && indexSupportsIncludeFilters()) {
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
@@ -372,6 +373,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		try {
 			Set<String> types = new HashSet<>();
 			for (TypeFilter filter : this.includeFilters) {
+				// stereotype 为 @Component 注解
 				String stereotype = extractStereotype(filter);
 				if (stereotype == null) {
 					throw new IllegalArgumentException("Failed to extract stereotype from " + filter);
@@ -413,7 +415,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
-			// 将 com.sourceflag.MyConfig 替换程 classpath*:com/sourceflag/MyConfig/**/*.class
+			// 将 com.sourceflag.MyConfig 替换成 classpath*:com/sourceflag/MyConfig/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
 			// 扫描指定包路径下的所有 class 文件包装成 Resource
@@ -426,9 +428,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				}
 				if (resource.isReadable()) {
 					try {
-						// 元数据读取器
+						// 元数据读取器，可以获取类掉相关信息
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
-						// 是不是候选的，也就是是不是 excludeFilters 或 includeFilters 指定的
+						// 是不是候选的 bean，也就是是不是 excludeFilters 或 includeFilters 指定的
 						// ★★★ 其中 includeFilters 会默认注册一个 this.includeFilters.add(new AnnotationTypeFilter(Component.class)); 保证可以扫描到 @Component 注解的类
 						// excludeFilter 会执行前面注册的一段回调函数，排除注册类
 						if (isCandidateComponent(metadataReader)) {
@@ -496,6 +498,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
 		// 排除的
+		// excludeFilters 会默认排除掉配置累
 		for (TypeFilter tf : this.excludeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return false;
@@ -505,7 +508,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		// includeFilters 会默认包含一个含有 @Component 注解的过滤器
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
-				// 是否有条件注解
+				// 是否有  @Conditional 条件注解
 				return isConditionMatch(metadataReader);
 			}
 		}

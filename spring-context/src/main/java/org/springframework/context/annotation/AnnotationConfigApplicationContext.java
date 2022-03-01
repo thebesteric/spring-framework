@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Arrays;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -27,6 +24,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.metrics.StartupStep;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.Arrays;
+import java.util.function.Supplier;
 
 /**
  * Standalone application context, accepting <em>component classes</em> as input &mdash;
@@ -69,7 +69,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	public AnnotationConfigApplicationContext() {
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
 		// ★★★ 解析配置类，就是加了 @Configuration 的类，如 AppConfig.class，在 spring 内部，就是这个作用
-		// AnnotationConfigApplicationContext 是 GenericApplicationContext 的子类，所以再 new AnnotationConfigApplicationContext() 同时，也实例化了 GenericApplicationContext
+		// AnnotationConfigApplicationContext 是 GenericApplicationContext 的子类，
+		// 所以再 new AnnotationConfigApplicationContext() 同时，也实例化了 GenericApplicationContext
 		// BeanFactory 对象: DefaultListableBeanFactory，在父类对象 GenericApplicationContext 中
 		// 同样也可以解析 GenericBeanDefinition 的类，因为 AnnotatedBeanDefinitionReader 继承了 GenericBeanDefinition
 		// 相当于 AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);

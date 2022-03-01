@@ -16,14 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Constructor;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Supplier;
-
 import org.springframework.beans.BeanMetadataAttributeAccessor;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -37,6 +29,10 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * Base class for concrete, full-fledged {@link BeanDefinition} classes,
@@ -138,6 +134,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	public static final String INFER_METHOD = "(inferred)";
 
 
+	// 这里的 beanClass 首先会调用 setBeanClassName 将一个字符串赋值给 beanClass
+	// 当需要实例化这个 bean 当时候，才会解析这个字符串，调用 setBeanClass 将 class 对象赋值给 beanClass
 	@Nullable
 	private volatile Object beanClass;
 
@@ -383,6 +381,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 */
 	@Override
 	public void setBeanClassName(@Nullable String beanClassName) {
+		// 这里的 beanClass 首先会调用 setBeanClassName 将一个字符串赋值给 beanClass
+		// 当需要实例化这个 bean 当时候，才会解析这个字符串，调用 setBeanClass 将 class 对象赋值给 beanClass
 		this.beanClass = beanClassName;
 	}
 
@@ -406,6 +406,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * @see #setBeanClassName(String)
 	 */
 	public void setBeanClass(@Nullable Class<?> beanClass) {
+		// 这里的 beanClass 首先会调用 setBeanClassName 将一个字符串赋值给 beanClass
+		// 当需要实例化这个 bean 当时候，才会解析这个字符串，调用 setBeanClass 将 class 对象赋值给 beanClass
 		this.beanClass = beanClass;
 	}
 
@@ -467,6 +469,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 			return null;
 		}
 		Class<?> resolvedClass = ClassUtils.forName(className, classLoader);
+		// 重新给 beanClass 赋值，此时 beanClass 由原先的 String 变成你了 Class 对象
 		this.beanClass = resolvedClass;
 		return resolvedClass;
 	}

@@ -16,6 +16,18 @@
 
 package org.springframework.beans;
 
+import kotlin.jvm.JvmClassMappingKt;
+import kotlin.reflect.KFunction;
+import kotlin.reflect.KParameter;
+import kotlin.reflect.full.KClasses;
+import kotlin.reflect.jvm.KCallablesJvm;
+import kotlin.reflect.jvm.ReflectJvmMapping;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.*;
+import org.springframework.lang.Nullable;
+import org.springframework.util.*;
+
 import java.beans.ConstructorProperties;
 import java.beans.PropertyDescriptor;
 import java.beans.PropertyEditor;
@@ -26,36 +38,7 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URL;
 import java.time.temporal.Temporal;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
-import kotlin.jvm.JvmClassMappingKt;
-import kotlin.reflect.KFunction;
-import kotlin.reflect.KParameter;
-import kotlin.reflect.full.KClasses;
-import kotlin.reflect.jvm.KCallablesJvm;
-import kotlin.reflect.jvm.ReflectJvmMapping;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.core.KotlinDetector;
-import org.springframework.core.MethodParameter;
-import org.springframework.core.ParameterNameDiscoverer;
-import org.springframework.core.ResolvableType;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
+import java.util.*;
 
 /**
  * Static convenience methods for JavaBeans: for instantiating beans,
@@ -622,6 +605,7 @@ public abstract class BeanUtils {
 		else {
 			Method writeMethod = pd.getWriteMethod();
 			Assert.state(writeMethod != null, "No write method available");
+			// 仅仅只会拿方法到第一个参数
 			return new MethodParameter(writeMethod, 0);
 		}
 	}
