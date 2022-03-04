@@ -7,7 +7,7 @@ import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.*;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
@@ -27,9 +27,9 @@ public class App {
 		ctx.register(Config.class);
 		ctx.refresh();
 
-
 		UserService userService = ctx.getBean(UserService.class);
 		userService.test2();
+
 	}
 
 	@Configuration

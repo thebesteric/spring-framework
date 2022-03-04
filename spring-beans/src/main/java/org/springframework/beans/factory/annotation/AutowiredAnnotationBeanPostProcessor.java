@@ -282,10 +282,12 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		// ★ candidateConstructorsCache：存放已经被推断完成的类和该类被推断出来的构造方法的集合
 		// 检查当前的类是否在 candidateConstructorsCache 中已经存在了已经推断过的构造方法，如果被推断过，就直接拿出来使用
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
+
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
 			synchronized (this.candidateConstructorsCache) {
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
+				// DCL
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
 					try {
@@ -299,7 +301,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					}
 					// 存放合格的构造方法，但是合格，并不代表都可用
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
-					// 必要的构造方法，比如在构造方法上加 @Autowired
+					// 必要的构造方法，比如在构造方法上加 @Autowired(required=true)，有且只能有一个
 					Constructor<?> requiredConstructor = null;
 					// 默认无参构造方法
 					Constructor<?> defaultConstructor = null;
@@ -334,6 +336,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 						// 有 @Autowired 注解的情况
 						if (ann != null) {
 							// 有注解，并且 @Autowired(required=true)，但是第一次肯定等于 null
+							// 如果发现 requiredConstructor != null，则表示又出现了 @Autowired 的构造方法（无论 true 还是 false），抛异常
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
@@ -343,28 +346,34 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 							// 检查注解是否有 required 的属性
 							boolean required = determineRequiredStatus(ann);
 							if (required) {
+								// candidates.isEmpty() 如果不是空，表示已经解析到一个 @Autowired 的构造方法
+								// 此时又发现了一个 @Autowired(required=true) 到构造方法，抛异常
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
 											". Found constructor with 'required' Autowired annotation: " +
 											candidate);
 								}
+								// 记录唯一的一个 required 为 true 的构造方法
 								// 给 requiredConstructor 赋值为 找到的构造方法
 								requiredConstructor = candidate;
 							}
 							// 将构造方法放到 candidates 集合中
+							// 记录了所有加了 @Autowired 注解的构造方法，无论 required 是 true 还是 false
+							// 如果无参的构造方法也加了 @Autowired 注解的话，也会被记录
 							candidates.add(candidate);
 						}
 						// ★★★ 当没有提供 @Autowired 注解，且构造方法没有任何参数（说明是默认构造方法）的时候才会找到默认构造方法
 						// 这里很重要，也就是当提供了多个构造函数的时候，又没有特殊指定 @Autowired 注解，就会去找默认构造函数
 						else if (candidate.getParameterCount() == 0) {
+							// 记录了一个无参的构造方法
 							defaultConstructor = candidate;
 						}
 					}
 					// 如果添加了 @Autowired 注解的构造方法
 					// candidates 里面到底存放的是什么？
-					// 1、required = true 的唯一构造方法
-					// 2、required = false 的所有构造方法，如果提供了无参构造方法，也会加入
+					// 情况1、candidates 只有一个 required = true 的唯一构造方法
+					// 情况2、candidates 会有多个 required = false 的所有构造方法，如果提供了无参构造方法，也会加入
 					if (!candidates.isEmpty()) {
 						// Add default constructor to list of optional constructors, as fallback.
 						// 如果没有指定 required = true 的构造方法，那么就把所有构造方法添加到 candidates 中

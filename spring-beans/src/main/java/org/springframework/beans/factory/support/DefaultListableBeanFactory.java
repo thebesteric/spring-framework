@@ -1304,6 +1304,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		try {
 			// 如果当前的 descriptor 做过依赖注入了，则可以直接取 shortcut 了，相当于缓存
 			// ShortcutDependencyDescriptor#resolveShortcut
+			// 即从 beanFactory.getBean(this.shortcut, this.requiredType);
 			Object shortcut = descriptor.resolveShortcut(this);
 			if (shortcut != null) {
 				return shortcut;
@@ -1360,6 +1361,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 			// 根据类型找到了多个符合的 bean
 			if (matchingBeans.size() > 1) {
+				// byName 的实现
 				// 此时需要根据 name 继续查找，经过三个判断：@Primary --> @Priority --> beanName
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {

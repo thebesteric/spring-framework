@@ -1606,6 +1606,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						}
 					}
 				}
+				// className 转化为 class 类型
 				return ClassUtils.forName(className, dynamicLoader);
 			}
 		}

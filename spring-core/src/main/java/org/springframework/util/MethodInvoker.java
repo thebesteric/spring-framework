@@ -16,11 +16,11 @@
 
 package org.springframework.util;
 
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import org.springframework.lang.Nullable;
 
 /**
  * Helper class that allows for specifying a method to invoke in a declarative
@@ -307,17 +307,22 @@ public class MethodInvoker {
 	public static int getTypeDifferenceWeight(Class<?>[] paramTypes, Object[] args) {
 		int result = 0;
 		for (int i = 0; i < paramTypes.length; i++) {
+			// 值根本不是当前类型，返回一个最大值，表示不匹配
 			if (!ClassUtils.isAssignableValue(paramTypes[i], args[i])) {
 				return Integer.MAX_VALUE;
 			}
 			if (args[i] != null) {
+				// 当前类型和值的父类
 				Class<?> paramType = paramTypes[i];
 				Class<?> superClass = args[i].getClass().getSuperclass();
+				// 值的类型和当前类型离得越远，分数越高，表示偏离的越多
 				while (superClass != null) {
+					// 值的父类等于当前参数类型
 					if (paramType.equals(superClass)) {
 						result = result + 2;
 						superClass = null;
 					}
+					// 值的父类是当前类型的子类
 					else if (ClassUtils.isAssignable(paramType, superClass)) {
 						result = result + 2;
 						superClass = superClass.getSuperclass();
@@ -326,6 +331,7 @@ public class MethodInvoker {
 						superClass = null;
 					}
 				}
+				// 当前类型是接口，再加一分
 				if (paramType.isInterface()) {
 					result = result + 1;
 				}
