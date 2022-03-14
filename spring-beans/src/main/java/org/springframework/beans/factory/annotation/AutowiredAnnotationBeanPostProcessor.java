@@ -250,6 +250,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				try {
 					Class<?> targetClass = beanClass;
 					do {
+						// 寻找方法上是否有 @Lookup 注解
 						ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 							Lookup lookup = method.getAnnotation(Lookup.class);
 							if (lookup != null) {

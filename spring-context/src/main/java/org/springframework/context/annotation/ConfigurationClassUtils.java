@@ -16,14 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -40,6 +34,11 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Utilities for identifying {@link Configuration} classes.
@@ -84,17 +83,25 @@ abstract class ConfigurationClassUtils {
 	public static boolean checkConfigurationClassCandidate(
 			BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
 
+		// @Bean 定义的方法，是没有 beanClassName 属性的
+		// 也就是说 @Bean 定义的配置类是不起作用的
 		String className = beanDef.getBeanClassName();
 		if (className == null || beanDef.getFactoryMethodName() != null) {
 			return false;
 		}
 
+		// 注解的元数据
 		AnnotationMetadata metadata;
+
+		// 如果是 AnnotatedBeanDefinition 则直接获取 metadata
+		// 其中 AppConfig.class 是一个 AnnotatedGenericBeanDefinition 实现了 AnnotatedBeanDefinition
+		// 所以 AppConfig 就会在这里解析到元数据
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
 			// Can reuse the pre-parsed metadata from the given BeanDefinition...
 			metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
 		}
+		// 如果是 AbstractBeanDefinition 则通过反射 beanClass 获取 metadata
 		else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
@@ -105,6 +112,7 @@ abstract class ConfigurationClassUtils {
 					EventListenerFactory.class.isAssignableFrom(beanClass)) {
 				return false;
 			}
+			// 反射
 			metadata = AnnotationMetadata.introspect(beanClass);
 		}
 		else {
@@ -121,13 +129,17 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
-		// 判断是不是一个完全的配置类，也就是是否有 @Configuration 注解标识
+		// 判断是不是一个完全的配置类，也就是是否有 @Configuration 注解标识，然后将属性封装为一个 map
 		// 完全配置类会被 CGLIB 动态代理
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+
+		// 如果有 @Configuration 注解，并且 proxyBeanMethods=true
+		// 则是 full 配置类
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
-		// 这里判断是不是非正式的配置类，如 @Component，@ComponentScan，@Import，@ImportResource 或者含有 @Bean 注解的方法
+		// 如果没有 @Configuration，但是有：如 @Component，@ComponentScan，@Import，@ImportResource 或者含有 @Bean 注解的方法
+		// 则是 lite 配置类
 		else if (config != null || isConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
@@ -158,6 +170,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Any of the typical annotations found?
+		// 含有：Component.class、ComponentScan.class、Import.class、ImportResource.class
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -166,6 +179,7 @@ abstract class ConfigurationClassUtils {
 
 		// Finally, let's look for @Bean methods...
 		try {
+			// 方法内部有 @Bean 注解的方法，也是一个配置类
 			return metadata.hasAnnotatedMethods(Bean.class.getName());
 		}
 		catch (Throwable ex) {

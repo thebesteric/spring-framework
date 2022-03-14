@@ -16,17 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
@@ -35,13 +26,7 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
 import org.springframework.beans.factory.parsing.SourceExtractor;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.AbstractBeanDefinitionReader;
-import org.springframework.beans.factory.support.BeanDefinitionReader;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanNameGenerator;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.support.*;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.core.SpringProperties;
@@ -56,6 +41,9 @@ import org.springframework.core.type.StandardMethodMetadata;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Method;
+import java.util.*;
 
 /**
  * Reads a given fully-populated set of ConfigurationClass instances, registering bean
@@ -126,6 +114,7 @@ class ConfigurationClassBeanDefinitionReader {
 	public void loadBeanDefinitions(Set<ConfigurationClass> configurationModel) {
 		TrackedConditionEvaluator trackedConditionEvaluator = new TrackedConditionEvaluator();
 		for (ConfigurationClass configClass : configurationModel) {
+			// 从配置类读取 BD 并完成注册
 			loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
 		}
 	}
@@ -147,14 +136,20 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 		// ★★★ 是否含有 @Import 注解
 		if (configClass.isImported()) {
+			// 通过 @Import 导入的 bean 生成 BD
+			// 注意一下：通过 @Import 导入的 bean，其名称默认是类的全限定名
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
-		// ★★★ 是否有 @bean 方法
+		// ★★★ 是否有 @Bean 方法
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
+			// 通过 bean 方法生成 BD
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// 处理 @ImportedResource 导入的 spring.xml 文件
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+
+		// 处理	@Import 导入的 ImportBeanDefinitionRegistrar 接口生成的 bean
 		// 执行 ImportBeanDefinitionRegistrar 的 registerBeanDefinitions 方法
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
@@ -168,6 +163,7 @@ class ConfigurationClassBeanDefinitionReader {
 
 		ScopeMetadata scopeMetadata = scopeMetadataResolver.resolveScopeMetadata(configBeanDef);
 		configBeanDef.setScope(scopeMetadata.getScopeName());
+		// 通过 @Import 导入的 bean，其名称默认是类的全限定名，使用的是：FullyQualifiedAnnotationBeanNameGenerator
 		String configBeanName = this.importBeanNameGenerator.generateBeanName(configBeanDef, this.registry);
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(configBeanDef, metadata);
 
@@ -189,6 +185,7 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsForBeanMethod(BeanMethod beanMethod) {
 		ConfigurationClass configClass = beanMethod.getConfigurationClass();
 		MethodMetadata metadata = beanMethod.getMetadata();
+		// @Bean 注解的 bean，默认名称为：方法名
 		String methodName = metadata.getMethodName();
 
 		// Do we need to mark the bean as skipped by its condition?
@@ -213,7 +210,10 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		// Has this effectively been overridden before (e.g. via XML)?
+		// 1、如果有相同名字的 @Bean 注解的方法，直接 return 不会再创建了
+		// 2、如果 @Component 生成的 BD 和 @Bean 生成的 BD 相同，则会返回 false，后续的代码会进行覆盖
 		if (isOverriddenByExistingDefinition(beanMethod, beanName)) {
+			// bean 的名字和 AppConfig 的名字是相同的，则报错
 			if (beanName.equals(beanMethod.getConfigurationClass().getBeanName())) {
 				throw new BeanDefinitionStoreException(beanMethod.getConfigurationClass().getResource().getDescription(),
 						beanName, "Bean name derived from @Bean method '" + beanMethod.getMetadata().getMethodName() +
@@ -222,6 +222,7 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 生成 BD
 		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata, beanName);
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
@@ -294,6 +295,7 @@ class ConfigurationClassBeanDefinitionReader {
 			logger.trace(String.format("Registering bean definition for @Bean method %s.%s()",
 					configClass.getMetadata().getClassName(), beanName));
 		}
+		// 注册到 beanDefinitionMap 中
 		this.registry.registerBeanDefinition(beanName, beanDefToRegister);
 	}
 
@@ -307,6 +309,8 @@ class ConfigurationClassBeanDefinitionReader {
 		// -> allow the current bean method to override, since both are at second-pass level.
 		// However, if the bean method is an overloaded case on the same configuration class,
 		// preserve the existing bean definition.
+		// ConfigurationClassBeanDefinition 是通过 @Bean 生成的类型
+		// ScannedGenericBeanDefinition 是通过扫描生成的类型
 		if (existingBeanDef instanceof ConfigurationClassBeanDefinition) {
 			ConfigurationClassBeanDefinition ccbd = (ConfigurationClassBeanDefinition) existingBeanDef;
 			if (ccbd.getMetadata().getClassName().equals(
@@ -323,6 +327,7 @@ class ConfigurationClassBeanDefinitionReader {
 
 		// A bean definition resulting from a component scan can be silently overridden
 		// by an @Bean method, as of 4.2...
+		// 已存在的 BD 是通过扫描获取到的类型，返回 false，后面会使用 @Bean 进行覆盖扫描获得的类型
 		if (existingBeanDef instanceof ScannedGenericBeanDefinition) {
 			return false;
 		}
@@ -389,6 +394,7 @@ class ConfigurationClassBeanDefinitionReader {
 			}
 
 			// TODO SPR-6310: qualify relative path locations as done in AbstractContextLoader.modifyLocations
+			// 解析 xml 文件，并完成 BD 注册
 			reader.loadBeanDefinitions(resource);
 		});
 	}

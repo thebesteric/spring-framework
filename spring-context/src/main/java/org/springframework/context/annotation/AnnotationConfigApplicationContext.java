@@ -67,6 +67,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
+
+		// 会先调用父类的无参构造方法，来创建 beanFactory 工厂
+		// this.beanFactory = new DefaultListableBeanFactory();
+		super();
+
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
 		// ★★★ 解析配置类，就是加了 @Configuration 的类，如 AppConfig.class，在 spring 内部，就是这个作用
 		// AnnotationConfigApplicationContext 是 GenericApplicationContext 的子类，
@@ -77,8 +82,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		// 提供一个 reader 出来，这么做是为了可以做到动态加载，即提供一个 API 给外部使用
 		// ★★★ 同时还会将 Spring 所需要的一些内部的（必须的重要的） BD 放到 beanDefinitionMap 中
 		// ★★★ 1、internalConfigurationClassPostProcessor，负责解析配置类
-		// 2、internalAutowiredAnnotationBeanPostProcessor
-		// 3、internalCommonAnnotationBeanPostProcessor
+		// 2、internalAutowiredAnnotationBeanPostProcessor：处理 @Autowired 注解
+		// 3、internalCommonAnnotationBeanPostProcessor：处理 @Resource 注解
 		// 4、internalEventListenerProcessor：处理 @EventListener 的类
 		// 5、internalEventListenerFactory
 		// 6、internalPersistenceAnnotationProcessor（是否启动 JPA）

@@ -164,7 +164,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		}
 		// 设置环境对象
 		setEnvironment(environment);
-		// 设置资源加载其
+		// 设置资源加载器
 		setResourceLoader(resourceLoader);
 	}
 
@@ -289,11 +289,12 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
-				// 获取 @Lazy，@Primary，@DependsOn、@Role、@Description 等属性
+				// 设置 @Lazy，@Primary，@DependsOn、@Role、@Description 等属性
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				// 检查 beanDefinition 是否已经存在
+				// 如果存在相同的，则抛出异常
 				if (checkCandidate(beanName, candidate)) {
 					// 将 BD 封装成一个 BeanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);

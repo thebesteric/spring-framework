@@ -16,32 +16,21 @@
 
 package org.springframework.context.support;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.AbstractBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.support.*;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.core.metrics.StartupStep;
 import org.springframework.lang.Nullable;
+
+import java.util.*;
 
 /**
  * Delegate for AbstractApplicationContext's post-processor handling.
@@ -118,6 +107,7 @@ final class PostProcessorRegistrationDelegate {
 			// 因为此时未进行扫描，所以只有 spring 初始的 6 个 BD，所以后面还需要再进行 getBeanNamesForType
 			// 同时此时不能拿原始的 BD 去比较，必须先进行合并，应为可能有父类
 			// 这里地方只能找到一个 internalConfigurationAnnotationProcessor
+			// 也就是在初始化 reader 的时候，注册的 ConfigurationClassPostProcessor，同时实现了 PriorityOrdered 接口
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
@@ -154,6 +144,7 @@ final class PostProcessorRegistrationDelegate {
 				// 执行过的不会再执行了，并且 实现了 Ordered 接口
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+					// 记录一下已经执行过的 bean
 					processedBeans.add(ppName);
 				}
 			}
@@ -189,10 +180,10 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
-			// 现在，已经执行完所有的 BeanDefinitionRegistryPostProcessor 调的 postProcessBeanFactory回调
+			// 现在，已经执行完目前所有的 BeanDefinitionRegistryPostProcessor 接口的 postProcessBeanDefinitionRegistry 方法
 			// 1、利用 API new 的
 			// 2、Spring 自己内置的
-			// ★★★ 现在开始执行所有 实现了 BeanDefinitionRegistryPostProcessor 接口的父类的 BeanFactoryPostProcessor 的 postProcessBeanFactory 方法
+			// ★★★ 现在开始执行所有实现了 BeanDefinitionRegistryPostProcessor 接口的父类的 BeanFactoryPostProcessor 的 postProcessBeanFactory 方法
 			// 也就是 BeanFactoryPostProcessor 的 postProcessBeanFactory 方法
 			// ★★★ 同时也完成了对 AppConfig 的 CGLIB 动态代理
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);

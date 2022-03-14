@@ -16,30 +16,15 @@
 
 package org.springframework.context.annotation;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.framework.autoproxy.AutoProxyUtils;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.beans.factory.config.SingletonBeanRegistry;
+import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.parsing.FailFastProblemReporter;
 import org.springframework.beans.factory.parsing.PassThroughSourceExtractor;
 import org.springframework.beans.factory.parsing.ProblemReporter;
@@ -67,6 +52,8 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.util.*;
 
 /**
  * {@link BeanFactoryPostProcessor} used for bootstrapping processing of
@@ -269,8 +256,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			// Simply call processConfigurationClasses lazily at this point then.
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
-		// ★★★ 使用 cglib 对配置类进行了动态代理，因为 @Bean 方法到时候需要创建 bean 的实例
+		// ★★★ 使用 cglib 对配置类（@Configuration 注解的类）进行了动态代理，因为 @Bean 方法到时候需要创建 bean 的实例
 		enhanceConfigurationClasses(beanFactory);
+
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
 
@@ -280,6 +268,14 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+
+		// 因为还没有开始扫描，所以这里只能提前注册到 beanFactory 到几个 BD
+		// 1、internalConfigurationAnnotationProcessor
+		// 2、internalAutowiredAnnotationProcessor
+		// 3、internalCommonAnnotationProcessor
+		// 4、internalEventListenerProcessor
+		// 5、internalEventListenerFactory
+		// 6、appConfig（配置类，就是在 ctx.register(AppConfig.class); 注册进来的
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
@@ -291,8 +287,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				}
 			}
 			// ★★★ 判断当前配置类是不是一个完全的配置类，还是一个非完全的配置累
-			// 含有 @Configuration 就是完全的配置类
-			// 不含 @Configuration，含有 @Component，@ComponentScan，@Import，@ImportResource 是一个非完全的配置累
+			// 含有 @Configuration 就是完全的配置类 -> FULL
+			// 不含 @Configuration，含有 @Component，@ComponentScan，@Import，@ImportResource 是一个非完全的配置类 -> LITE
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
@@ -351,8 +347,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			parser.parse(candidates);
 			parser.validate();
 
-			// 解析出来的配置类
+			// 从 configurationClasses 获取解析出来的配置类
 			Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+			// 删除掉已经解析过的，这样可以避免重复
 			configClasses.removeAll(alreadyParsed);
 
 			// Read the model and create bean definitions based on its content
@@ -365,11 +362,15 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			// ★★★ 此处会把 @Bean 方法和 @Import 注册到 beanDefinitionMap 中
 			// 所以这里如果 @Bean 与 @Component 同名的话，@Bean 会覆盖 @Component 注册的 beanDefinition
 			this.reader.loadBeanDefinitions(configClasses);
+
 			// 加入以解析的集合中
 			alreadyParsed.addAll(configClasses);
 			processConfig.tag("classCount", () -> String.valueOf(configClasses.size())).end();
 
+			// 清空已经处理过的配置类
 			candidates.clear();
+
+			// 检查是否生成了新的 BD
 			if (registry.getBeanDefinitionCount() > candidateNames.length) {
 				String[] newCandidateNames = registry.getBeanDefinitionNames();
 				Set<String> oldCandidateNames = new HashSet<>(Arrays.asList(candidateNames));
@@ -449,6 +450,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 							"is a non-static @Bean method with a BeanDefinitionRegistryPostProcessor " +
 							"return type: Consider declaring such methods as 'static'.");
 				}
+				// 只有 FULL 配置类，才会加入到 configBeanDefs 中
 				configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
 			}
 		}
@@ -458,6 +460,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return;
 		}
 
+		// 生成代理类，并设置到 BD 的 beanClass 属性中去
+		// 走到这一步，那么代理类一定是 FULL 的
 		ConfigurationClassEnhancer enhancer = new ConfigurationClassEnhancer();
 		for (Map.Entry<String, AbstractBeanDefinition> entry : configBeanDefs.entrySet()) {
 			AbstractBeanDefinition beanDef = entry.getValue();

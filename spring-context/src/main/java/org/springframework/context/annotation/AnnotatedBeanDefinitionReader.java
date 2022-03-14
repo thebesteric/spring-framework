@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Annotation;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
@@ -32,6 +29,9 @@ import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
+import java.util.function.Supplier;
 
 /**
  * Convenient adapter for programmatic registration of bean classes.
@@ -68,6 +68,7 @@ public class AnnotatedBeanDefinitionReader {
 	 * @see #setEnvironment(Environment)
 	 */
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry) {
+		// 同时创建了 StandardEnvironment 环境对象
 		this(registry, getOrCreateEnvironment(registry));
 	}
 
@@ -84,7 +85,13 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		// 构建来一个解析 @Condition 注解的解析器
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		// 1、注册了解析 @Configuration 配置类：ConfigurationClassPostProcessor.class 是一个 BeanFactoryPostProcessor
+		// 2、注册了解析 @Autowired 配置类：AutowiredAnnotationBeanPostProcessor.class
+		// 3、注册了解析 @Resource 配置类：CommonAnnotationBeanPostProcessor.class
+		// 4、注册了解析 @EventListener 方法的配置类：EventListenerMethodProcessor.class
+		// 5、注册了解析 @EventListener 方法的配置类：DefaultEventListenerFactory.class
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -258,6 +265,7 @@ public class AnnotatedBeanDefinitionReader {
 		abd.setInstanceSupplier(supplier);
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
 		abd.setScope(scopeMetadata.getScopeName());
+		// 生成 beanName
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);

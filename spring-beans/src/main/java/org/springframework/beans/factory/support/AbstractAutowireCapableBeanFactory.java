@@ -1393,6 +1393,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						getAccessControlContext());
 			}
 			else {
+				// getInstantiationStrategy() 的实现为 CglibSubclassingInstantiationStrategy
 				beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, this);
 			}
 			BeanWrapper bw = new BeanWrapperImpl(beanInstance);
@@ -1477,7 +1478,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
 		// 已经标记为过时的方法
-		// @Bean(autowire = Autowire.BY_TYPE) 这种方式，模式 autowire 为 Autowire.NO
+		// @Bean(autowire = Autowire.BY_TYPE) 这种方式，模式 autowire 默认值为 Autowire.NO
+		// 只有 Autowire.BY_TYPE 或 Autowire.BY_NAME 才支持 setter 方法的注入
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
@@ -1638,7 +1640,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 获取属性描述器，属性必须含有 setter 或 getter 方法
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
 		for (PropertyDescriptor pd : pds) {
-			// 必须要有 setter 方法
+			// 必须要有 setter 方法 && 不是 ignoredDependencyInterfaces 中所定义的接口的 setter 方法
 			if (pd.getWriteMethod() != null && !isExcludedFromDependencyCheck(pd) && !pvs.contains(pd.getName()) &&
 					!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
 				result.add(pd.getName());

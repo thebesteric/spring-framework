@@ -26,4 +26,8 @@ public class UserService {
 	public UserService(OrderService orderService, OrderService orderService1, OrderServiceInterface orderServiceInterface) {
 		System.out.println(4);
 	}
+
+	public void setOrderService(OrderService orderService) {
+		System.out.println("setOrderService = " + orderService);
+	}
 }

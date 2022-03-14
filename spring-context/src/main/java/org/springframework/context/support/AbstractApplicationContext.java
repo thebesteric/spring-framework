@@ -524,19 +524,20 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
 
 			// Prepare this context for refreshing.
-			// 准备工作，验证必要属性，设置容器为激活状态
+			// 准备工作（模板方法），验证必要属性，设置容器为激活状态
 			// 注册了一个早期的事件监听器集合，用于存储早期事件监听器，不需要手动调用 publishEvent 来发布，会有系统自动发布
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
-			// 刷新 beanFactory 得到一个空的 beanFactory
-			// ★★★ AnnotationConfigApplicationContext 其实就是获取 GenericApplicationContext 构造函数中 new 出来的 DefaultListableBeanFactory
+			// （模板方法）得到一个是否可以刷新的 beanFactory
+			// ★★★ AnnotationConfigApplicationContext 其实就是获取 GenericApplicationContext 构造函数中 new 出来的 DefaultListableBeanFactory，不支持重复刷新的
+			// 而 SpringMVC 是通过 AnnotationConfigWebApplicationContext 获取的是 AbstractRefreshableApplicationContext 是支持重复刷新的
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
 			// ★★★ 准备 BeanFactory，也就是往 BeanFactory 添加如下：
-			// 1、设置 BeanFactory 的类加载器、表达式解析器、类型转化器
-			// 2、添加 3 个 BeanPostProcessor：ApplicationContextAwareProcessor、ApplicationListenerDetector、LoadTimeWeaverAwareProcessor
+			// 1、设置 BeanFactory 的类加载器、SpringEL 表达式解析器、类型转化器
+			// 2、添加 2 个 BeanPostProcessor：ApplicationContextAwareProcessor、ApplicationListenerDetector
 			// 3、记录 6 个 ignoreDependencyInterface，这里和 bd 的 autowired 的类型相关
 			// 4、注册 4 个 registerResolvableDependency，如：ApplicationContext，这样我们就可以用过 getBean 直接获取到 bean 的实例
 			// 5、添加 3 个单例 bean，其实就是 Environment 对象
@@ -650,6 +651,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Initialize any placeholder property sources in the context environment.
 		// 可以允许子容器设置一些内容到 Environment 中
+		// AnnotationConfigWebApplicationContext#initPropertySources 就会把 ServletContext 加入环境变量
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
@@ -710,11 +712,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Tell the internal bean factory to use the context's class loader etc.
 		// 为 BeanFactory 设置当前应用的类加载器
 		beanFactory.setBeanClassLoader(getClassLoader());
+
 		if (!shouldIgnoreSpel) {
-			// 为 BeanFactory 设置 SPEL 表达式解析器
+			// 为 BeanFactory 设置 SpEL 表达式解析器
 			beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
 		}
-		// 为 BeanFactory 设置属性资源编辑器（用于给 bean 进行对象赋值用）
+
+		// 为 BeanFactory 设置属性资源转换器（用于给 bean 进行对象赋值用）
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
@@ -722,7 +726,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
 		// 忽略以下接口的 bean 的函数方法
-		// 在 populateBean 时，以下接口都有 setXXX 方法，这些 setter 方法容器会忽略掉
+		// 在 populateBean 时，以下接口都有 setXXX 方法，在 byType 或 byName 这个注入模型下，这些 setter 方法容器会忽略掉
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -737,7 +741,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// @Autowired
 		// ApplicationContext applicationContext
 		// 当 bean 的属性注入的时候，一旦检测到属性为 ApplicationContext 类型，便会将 ApplicationContext 的实例对象注入进来
-		// 就是因为下述注册了可以自动装配的几种类型
+		// 就是因为下述注册了内置的，可以自动装配的几种类型
 		// 在 populateBean 中会有体现
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
@@ -749,7 +753,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
-		// AspectJ 相关
+		// AspectJ 相关，默认不会进入
 		if (!IN_NATIVE_IMAGE && beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
 			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
 			// Set a temporary ClassLoader for type matching.
@@ -757,19 +761,21 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Register default environment beans.
+		// 以下对象直接加入单例池
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			// 环境
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
 		}
 		if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
-			// 环境系统属性
+			// 操作系统环境变量
 			beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
 		}
 		if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
-			// 系统环境
+			// JVM 环境变量：-Dxxx=yyy 指定
 			beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
 		}
 		if (!beanFactory.containsLocalBean(APPLICATION_STARTUP_BEAN_NAME)) {
+			// 监控的对象
 			beanFactory.registerSingleton(APPLICATION_STARTUP_BEAN_NAME, getApplicationStartup());
 		}
 	}
@@ -793,9 +799,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// 关键代码：getBeanFactoryPostProcessors() 正常情况下是空
 		// 除非手工通过 ac.addBeanFactoryPostProcessor(xxx) 添加
-		// getBeanFactoryPostProcessors()，有两种情况，
-		// 第一种是直接实现了 BeanFactoryPostProcessor 接口的，如：ConfigurationClassPostProcessor
-		// 第二种是实现了 BeanDefinitionRegistryPostProcessor 接口的，如：ConfigurationClassPostProcessor
+		// getBeanFactoryPostProcessors()，有两种 bean 情况，
+		// 第一种是直接实现了 BeanFactoryPostProcessor 接口的，如：ConfigurationClassPostProcessor，可以修改 BD
+		// 第二种是实现了 BeanDefinitionRegistryPostProcessor 接口的，如：ConfigurationClassPostProcessor，可以注册 BD
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
@@ -966,6 +972,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Register a default embedded value resolver if no bean post-processor
 		// (such as a PropertyPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
+		// 占位符解析器 ${xxx} 这种格式
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
