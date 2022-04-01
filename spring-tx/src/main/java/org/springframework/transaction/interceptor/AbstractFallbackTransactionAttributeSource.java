@@ -16,20 +16,19 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.MethodClassKey;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringValueResolver;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract implementation of {@link TransactionAttributeSource} that caches
@@ -130,9 +129,11 @@ public abstract class AbstractFallbackTransactionAttributeSource
 				this.attributeCache.put(cacheKey, NULL_TRANSACTION_ATTRIBUTE);
 			}
 			else {
+				// 获取方法身份，后面会作为事务名称
 				String methodIdentification = ClassUtils.getQualifiedMethodName(method, targetClass);
 				if (txAttr instanceof DefaultTransactionAttribute) {
 					DefaultTransactionAttribute dta = (DefaultTransactionAttribute) txAttr;
+					// 设置 Descriptor，后面会作为事务名称
 					dta.setDescriptor(methodIdentification);
 					dta.resolveAttributeStrings(this.embeddedValueResolver);
 				}

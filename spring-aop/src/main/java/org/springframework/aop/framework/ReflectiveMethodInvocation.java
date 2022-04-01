@@ -16,19 +16,18 @@
 
 package org.springframework.aop.framework;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.ProxyMethodInvocation;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.BridgeMethodResolver;
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-
-import org.springframework.aop.ProxyMethodInvocation;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.core.BridgeMethodResolver;
-import org.springframework.lang.Nullable;
 
 /**
  * Spring's implementation of the AOP Alliance
@@ -159,22 +158,33 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	@Nullable
 	public Object proceed() throws Throwable {
 		// We start with an index of -1 and increment early.
+		// 当调用完最后一个 interceptor 后，就会符合条件
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
 			// ★★★ 当所有 interceptor 都执行完毕后，再执行目标对象的方法
+			// method.invoke(target, args);
 			return invokeJoinpoint();
 		}
 
+		// currentInterceptorIndex 默认值为 -1
+		// 取出第一个 MethodInterceptor
 		Object interceptorOrInterceptionAdvice =
 				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+
+		// MethodInterceptor 是否是 InterceptorAndDynamicMethodMatcher 类型
+		// 即：是否 runtime 为 true，当 runtime 为 true 的时候，表示要对运行时的方法参数进行校验会把 advice 封装为 InterceptorAndDynamicMethodMatcher
 		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
 			// Evaluate dynamic method matcher here: static part will already have
 			// been evaluated and found to match.
 			InterceptorAndDynamicMethodMatcher dm =
 					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
+			// 进行参数匹配
 			if (dm.methodMatcher.matches(this.method, targetClass, this.arguments)) {
+				// ★ 执行 MethodInterceptor 的代理逻辑中的方法
+				// 会把 this 作为参数传递，而参数内部会执行 this.proceed(); 所以会递归调用
 				return dm.interceptor.invoke(this);
 			}
+			// 参数不匹配的话，直接跳过，继续执行
 			else {
 				// Dynamic matching failed.
 				// Skip this interceptor and invoke the next in the chain.
@@ -185,7 +195,8 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		else {
 			// It's an interceptor, so we just invoke it: The pointcut will have
 			// been evaluated statically before this object was constructed.
-			// ★ 先执行代理逻辑中的方法
+			// ★ 执行 MethodInterceptor 的代理逻辑中的方法
+			// 会把 this 作为参数传递，而参数内部会执行 this.proceed(); 所以会递归调用
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
 		}
 	}

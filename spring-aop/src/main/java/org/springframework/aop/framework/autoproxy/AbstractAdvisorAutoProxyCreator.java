@@ -16,8 +16,6 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.util.List;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.support.AopUtils;
@@ -26,6 +24,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.List;
 
 /**
  * Generic auto proxy creator that builds AOP proxies for specific beans
@@ -93,13 +93,13 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
-		// 会从缓存中得到所有的 Advisor
+		// 会从缓存中得到所有候选的 Advisor
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
 		// ★★★ 进行筛选，找出合格的 Advisor，也就是这些 advisor 能不能作用到当前的 bean 上（切点是否可以命中当前的 bean）
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
 		extendAdvisors(eligibleAdvisors);
 		if (!eligibleAdvisors.isEmpty()) {
-			// ★★★ 排序，也就是执行顺序
+			// ★★★ 排序，也就是执行顺序，使用 @Order 或 Ordered 接口进行排序
 			eligibleAdvisors = sortAdvisors(eligibleAdvisors);
 		}
 		// 返回匹配的 Advisor

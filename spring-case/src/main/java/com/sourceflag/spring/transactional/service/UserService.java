@@ -27,23 +27,43 @@ public class UserService {
 	@Autowired
 	private UserMapper userMapper;
 
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void test() {
-		userMapper.insert1(new User("张三"));
+		userMapper.insert1(new User("test"));
+		userService.test1();
+		System.out.println("completed");
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void test1() {
-		userMapper.insert1(new User("张三"));
+		userMapper.insert1(new User("test1"));
 
+		// 获取当前事务的名字：com.sourceflag.spring.transactional.service.UserService.test1
+		System.out.println(TransactionSynchronizationManager.getCurrentTransactionName());
+
+		// 可以通过这个 api 实现监听事务执行过程
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void suspend() {
 				System.out.println("被挂起了");
 			}
+
+			@Override
+			public void beforeCommit(boolean readOnly) {
+				System.out.println("提交前...");
+			}
 		});
 
-		userService.test3();
+		// // 直接调用方法是不会触发事物的，比如使用 userService.xxx();
+		// // test3();
+		// userService.test3();
+		//
+		// try {
+		// 	throw new RuntimeException("发生后续业务异常");
+		// } catch (Exception ex) {
+		// 	// 由于异常被抓了，所以需要设置回滚
+		// 	TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+		// }
 	}
 
 	@Transactional(propagation = Propagation.REQUIRED)

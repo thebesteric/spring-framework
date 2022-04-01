@@ -16,19 +16,9 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
@@ -49,6 +39,10 @@ import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostP
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
@@ -335,25 +329,26 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
-		// 当前这个 bean 不用被代理
-		// 也就是 Advice，PointCut，Advisor
+		// 从缓存中读取，判断是否要进行 AOP
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
 
-		// 先判断当前的 bean 需不需要进行 AOP，比如当前 bean 的类型是 PointCut、Advice、Advisor 等就不需要进行 AOP
+		// 先判断当前的 bean 需不需要进行 AOP
+		// 比如当前 bean 的类型是 PointCut、Advice、Advisor 等就不需要进行 AOP
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+			// 加入缓存，value 为 false，表示不用进行 AOP
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
 		}
 
 		// Create proxy if we have advice.
-		// ★★★ 根据当前的 bean 找到匹配的的 advisor
+		// ★★★ 根据当前的 bean 找到匹配的 advice 或 advisor
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 
 		// 如果匹配的 advisor != null，那么则进行代理，并返回代理对象
 		if (specificInterceptors != DO_NOT_PROXY) {
-			// 表示已经代理过了
+			// 记录某个 bean 已经代理过了
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
 			// ★★★ 基于 bean 和 advisor 创建代理对象
 			Object proxy = createProxy(
@@ -476,6 +471,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 		// 将 commonInterceptors 和 specificInterceptors 合并
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+
 		proxyFactory.addAdvisors(advisors);
 		proxyFactory.setTargetSource(targetSource);
 		customizeProxyFactory(proxyFactory);

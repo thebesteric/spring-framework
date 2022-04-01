@@ -16,10 +16,10 @@
 
 package org.springframework.aop.framework;
 
+import org.springframework.aop.SpringProxy;
+
 import java.io.Serializable;
 import java.lang.reflect.Proxy;
-
-import org.springframework.aop.SpringProxy;
 
 /**
  * Default {@link AopProxyFactory} implementation, creating either a CGLIB proxy
@@ -59,7 +59,10 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
 		// Spring 到底何时使用 JDK 动态代理，何时使用 CGLIB 动态代理？
 		// 如果设置的 targetClass 是一个接口，就会使用 JDK 动态代理
-		// 默认情况下 optimize = false，proxyTargetClass = false，ProxyFactory 添加了接口时，也会使用 JDK 动态代理
+		// 默认情况下：
+		// optimize = false，否是需要优化，早起的 CGLIB 是由于 JDK 动态代理的
+		// proxyTargetClass = false，是否代理类，因为 CGLIB 是支持代理类的，而 JDK 只能代理接口，如果 proxyTargetClass = true，无论是否实现类接口，都会使用 CGLIB
+		// hasNoUserSuppliedProxyInterfaces 会判断 ProxyFactory 是否通过 addInterface 添加了接口
 		if (!IN_NATIVE_IMAGE &&
 				(config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config))) {
 			Class<?> targetClass = config.getTargetClass();
@@ -67,7 +70,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 				throw new AopConfigException("TargetSource cannot determine target class: " +
 						"Either an interface or a target is required for proxy creation.");
 			}
-			// targetClass 是一个接口
+			// targetClass 是一个接口 或 targetClass 是不是 JDK 动态代理产生的代理类
 			if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
 				return new JdkDynamicAopProxy(config);
 			}

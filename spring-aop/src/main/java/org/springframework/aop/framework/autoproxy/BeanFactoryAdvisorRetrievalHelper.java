@@ -16,12 +16,8 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanCurrentlyInCreationException;
@@ -29,6 +25,9 @@ import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Helper for retrieving standard Spring Advisors from a BeanFactory,
@@ -70,13 +69,13 @@ public class BeanFactoryAdvisorRetrievalHelper {
 		if (advisorNames == null) {
 			// Do not initialize FactoryBeans here: We need to leave all regular beans
 			// uninitialized to let the auto-proxy creator apply to them!
-			// 从容器中找到实现了 Advisor 接口的实现类（通常找不到，因为我们没有使用实现接口的方式来实现 AOP）
+			// 从容器中找到实现了 Advisor 接口的实现类（通常找不到，因为我们很少使用实现接口的方式来实现 AOP）
 			// 而我们事务注解 @EnableTransactionManagement 则导入了一个叫 ProxyTransactionManagementConfiguration 的类
 			// 而这个配置类中配置了:
 			// @Bean(name = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME)
 			// @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 			// public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(...)
-			// 实现了 Advisor 接口
+			// BeanFactoryTransactionAttributeSourceAdvisor 类实现了 Advisor 接口
 			advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 					this.beanFactory, Advisor.class, true, false);
 			this.cachedAdvisorBeanNames = advisorNames;

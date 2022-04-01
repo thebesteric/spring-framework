@@ -13,6 +13,6 @@ import com.sourceflag.spring.mybatis.anno.Select;
 public interface UserMapper {
 
 	@Select("select * from User where id = {0}")
-	void getById(int id);
+	int getById(int id);
 
 }

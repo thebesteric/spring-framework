@@ -1,9 +1,7 @@
 package com.sourceflag.spring.mybatis.factory;
 
 import com.sourceflag.spring.mybatis.anno.Select;
-import com.sourceflag.spring.mybatis.service.UserMapper;
 import org.springframework.beans.factory.FactoryBean;
-import org.springframework.stereotype.Component;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -22,9 +20,17 @@ public class MyFactoryBean implements FactoryBean<Object> {
 
 	private Class<?> mapperInterface;
 
+
+
 	public MyFactoryBean(Class<?> mapperInterface) {
 		this.mapperInterface = mapperInterface;
 	}
+
+	// private SqlSession sqlSession;
+	//
+	// public void setSqlSession(SqlSessionFactory sqlSessionFactory) {
+	// 	this.sqlSession = sqlSessionFactory.openSession();
+	// }
 
 	@Override
 	public Object getObject() throws Exception {
@@ -33,9 +39,11 @@ public class MyFactoryBean implements FactoryBean<Object> {
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 				String select = method.getAnnotation(Select.class).value();
 				System.out.println(method.getName() + " => " + select);
-				return null;
+				return args;
 			}
 		});
+		// sqlSession.getConfiguration().addMapper(mapperInterface);
+		// return sqlSession.getMapper(mapperInterface);
 	}
 
 	@Override

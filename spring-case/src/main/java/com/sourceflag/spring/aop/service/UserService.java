@@ -1,7 +1,5 @@
 package com.sourceflag.spring.aop.service;
 
-import org.springframework.aop.framework.AopContext;
-import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +21,15 @@ public class UserService implements UserServiceInterface {
 	public String test() {
 		System.out.println("user test");
 
+		// if (new Random().nextBoolean()) {
+		// 	throw new NullPointerException("something wrong");
+		// }
+
+
 		// UserService userServiceProxy = (UserService) AopContext.currentProxy();
 		// userServiceProxy.other();
 
-		userService.other();
+		// userService.other();
 
 		// other();
 

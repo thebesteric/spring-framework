@@ -3,12 +3,12 @@ package com.sourceflag.spring.aop;
 import com.sourceflag.spring.aop.demo.SimpleCalculate;
 import com.sourceflag.spring.aop.service.OrderService;
 import com.sourceflag.spring.aop.service.UserServiceInterface;
+import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+import org.springframework.aop.support.NameMatchMethodPointcut;
+import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,8 +28,6 @@ public class App {
 
 		ctx.register(Config.class);
 		ctx.refresh();
-
-		ctx.scan();
 
 		SimpleCalculate simpleCalculate = (SimpleCalculate) ctx.getBean("simpleCalculate");
 		simpleCalculate.add(1, 2);
@@ -62,6 +60,21 @@ public class App {
 	// @EnableAspectJAutoProxy(proxyTargetClass = true) // proxyTargetClass = true，表示强制使用 CGLIB 动态代理
 	public static class Config {
 
+		/**
+		 * 让某个普通类成为代理对象
+		 */
+		// @Bean
+		public ProxyFactoryBean testService() {
+			OrderService testService = new OrderService();
+			ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
+			proxyFactoryBean.addAdvice(new MyAroundAdvice());
+			proxyFactoryBean.setTarget(testService);
+			return proxyFactoryBean;
+		}
+
+		/**
+		 * 让某个 bean 成为代理对象
+		 */
 		// @Bean // 需要关闭 @EnableAspectJAutoProxy
 		public BeanNameAutoProxyCreator beanNameAutoProxyCreator() {
 			// BeanNameAutoProxyCreator 其实是 BeanPostProcessor
@@ -71,10 +84,23 @@ public class App {
 			return beanNameAutoProxyCreator;
 		}
 
+		@Bean
+		public DefaultPointcutAdvisor defaultPointcutAdvisor() {
+			NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
+			pointcut.addMethodName("test");
+
+			DefaultPointcutAdvisor defaultPointcutAdvisor = new DefaultPointcutAdvisor();
+			defaultPointcutAdvisor.setPointcut(pointcut);
+			defaultPointcutAdvisor.setAdvice(new MyAroundAdvice());
+
+			return defaultPointcutAdvisor;
+		}
+
 
 		// @Bean // 需要关闭 @EnableAspectJAutoProxy
 		public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
 			// 寻找那些 bean 需要被代理（也就是 Advisor 类型的 bean），其实也是一个 BeanPostProcessor
+			// 也可以直接通过 @Import(DefaultAdvisorAutoProxyCreator.class) 直接导入
 			return new DefaultAdvisorAutoProxyCreator();
 		}
 

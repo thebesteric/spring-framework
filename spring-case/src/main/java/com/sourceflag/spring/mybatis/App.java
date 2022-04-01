@@ -1,11 +1,17 @@
 package com.sourceflag.spring.mybatis;
 
-import com.sourceflag.spring.mybatis.factory.MyBeanDefinitionRegistrar;
-import com.sourceflag.spring.mybatis.service.OrderMapper;
+import com.sourceflag.spring.mybatis.anno.MyMapperScan;
 import com.sourceflag.spring.mybatis.service.UserService;
-import org.mybatis.spring.annotation.MapperScan;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.mybatis.spring.mapper.MapperScannerConfigurer;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * App
@@ -29,15 +35,23 @@ public class App {
 
 	@Configuration
 	@ComponentScan("com.sourceflag.spring.mybatis")
-	@Import(MyBeanDefinitionRegistrar.class)
-	@MapperScan("com.sourceflag.spring.mybatis")
+	// @MapperScan("com.sourceflag.spring.mybatis")
+	@MyMapperScan("com.sourceflag.spring.mybatis")
 	public static class Config {
 
+		// 加上这个 bean，可以不用写 @MapperScan
 		// @Bean
 		public MapperScannerConfigurer mapperScannerConfigurer(){
 			MapperScannerConfigurer configurer = new MapperScannerConfigurer();
 			configurer.setBasePackage("com.sourceflag.spring.mybatis");
 			return configurer;
+		}
+
+		// 整合 mybatis 的重要 bean
+		// @Bean
+		public SqlSessionFactory sqlSessionFactory() throws IOException {
+			InputStream inputStream = Resources.getResourceAsStream("mybatis.xml");
+			return new SqlSessionFactoryBuilder().build(inputStream);
 		}
 
 	}

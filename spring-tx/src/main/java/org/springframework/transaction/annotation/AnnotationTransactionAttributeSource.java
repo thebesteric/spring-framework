@@ -16,6 +16,12 @@
 
 package org.springframework.transaction.annotation;
 
+import org.springframework.lang.Nullable;
+import org.springframework.transaction.interceptor.AbstractFallbackTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionAttribute;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+
 import java.io.Serializable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
@@ -23,12 +29,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
-import org.springframework.lang.Nullable;
-import org.springframework.transaction.interceptor.AbstractFallbackTransactionAttributeSource;
-import org.springframework.transaction.interceptor.TransactionAttribute;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 /**
  * Implementation of the
@@ -139,6 +139,7 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 
 	@Override
 	public boolean isCandidateClass(Class<?> targetClass) {
+		// this.annotationParsers 包括 SpringTransactionAnnotationParser，JtaTransactionAnnotationParser，Ejb3TransactionAnnotationParser
 		for (TransactionAnnotationParser parser : this.annotationParsers) {
 			// 通过 SpringTransactionAnnotationParser 类判断是否有 @Transactional 注解
 			if (parser.isCandidateClass(targetClass)) {
@@ -175,6 +176,7 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 		// this.annotationParsers = [SpringTransactionAnnotationParser，JtaTransactionAnnotationParser，Ejb3TransactionAnnotationParser]
 		for (TransactionAnnotationParser parser : this.annotationParsers) {
 			// 通过 SpringTransactionAnnotationParser 找到 @Transactional 注解的信息
+			// 并封装为 RuleBasedTransactionAttribute 这个对象
 			TransactionAttribute attr = parser.parseTransactionAnnotation(element);
 			if (attr != null) {
 				return attr;

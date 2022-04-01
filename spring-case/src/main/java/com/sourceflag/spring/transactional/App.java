@@ -9,6 +9,7 @@ import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 
 import javax.sql.DataSource;
 
@@ -28,7 +29,7 @@ public class App {
 		ctx.refresh();
 
 		UserService userService = ctx.getBean(UserService.class);
-		userService.test2();
+		userService.test();
 
 	}
 
@@ -68,8 +69,14 @@ public class App {
 		public PlatformTransactionManager transactionManager(DataSource dataSource) {
 			DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager();
 			dataSourceTransactionManager.setDataSource(dataSource);
+
 			// 设置要不要把事务信息同步到线程中
-			// dataSourceTransactionManager.setTransactionSynchronization(1);
+			dataSourceTransactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ALWAYS);
+
+			// 部分失败时是否全局回滚，如果设置 false 的话，则不会
+			// 如果有 tryCatch 则还是会全部提交，否则全部回滚
+			// dataSourceTransactionManager.setGlobalRollbackOnParticipationFailure(true);
+
 			return dataSourceTransactionManager;
 		}
 

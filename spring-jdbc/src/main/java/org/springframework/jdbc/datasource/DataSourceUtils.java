@@ -16,21 +16,19 @@
 
 package org.springframework.jdbc.datasource;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-
-import javax.sql.DataSource;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * Helper class that provides static methods for obtaining JDBC Connections from
@@ -185,6 +183,7 @@ public abstract class DataSourceUtils {
 				if (debugEnabled) {
 					logger.debug("Setting JDBC Connection [" + con + "] read-only");
 				}
+				// 设置否是只读
 				con.setReadOnly(true);
 			}
 			catch (SQLException | RuntimeException ex) {
@@ -211,6 +210,7 @@ public abstract class DataSourceUtils {
 			int currentIsolation = con.getTransactionIsolation();
 			if (currentIsolation != definition.getIsolationLevel()) {
 				previousIsolationLevel = currentIsolation;
+				// 设置隔离级别
 				con.setTransactionIsolation(definition.getIsolationLevel());
 			}
 		}

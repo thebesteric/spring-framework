@@ -92,9 +92,9 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		List<Advisor> advisors = super.findCandidateAdvisors();
 
 		// Build Advisors for all AspectJ aspects in the bean factory.
-		// XML 的方式
+		// 从所有切面中解析 advice	和 pointCut 包装为 advisor
 		if (this.aspectJAdvisorsBuilder != null) {
-			// ★★★ 找到以 AspectJ 的方式定义的 Advisor
+			// ★★★ 找到以 @Aspect 的方式定义的 Advisor
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
 		return advisors;
