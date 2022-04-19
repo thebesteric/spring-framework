@@ -16,16 +16,6 @@
 
 package org.springframework.web.servlet.support;
 
-import java.util.EnumSet;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.FilterRegistration.Dynamic;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.core.Conventions;
 import org.springframework.lang.Nullable;
@@ -35,6 +25,10 @@ import org.springframework.web.context.AbstractContextLoaderInitializer;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.FrameworkServlet;
+
+import javax.servlet.*;
+import javax.servlet.FilterRegistration.Dynamic;
+import java.util.EnumSet;
 
 /**
  * Base class for {@link org.springframework.web.WebApplicationInitializer}
@@ -79,26 +73,34 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 		String servletName = getServletName();
 		Assert.hasLength(servletName, "getServletName() must not return null or empty");
 
+		// 创建子容器
 		WebApplicationContext servletAppContext = createServletApplicationContext();
 		Assert.notNull(servletAppContext, "createServletApplicationContext() must not return null");
 
+		// 创建 DispatcherServlet
 		FrameworkServlet dispatcherServlet = createDispatcherServlet(servletAppContext);
 		Assert.notNull(dispatcherServlet, "createDispatcherServlet(WebApplicationContext) must not return null");
+
+		// 初始化器
 		dispatcherServlet.setContextInitializers(getServletApplicationContextInitializers());
 
+		// 注册了 DispatcherServlet
 		ServletRegistration.Dynamic registration = servletContext.addServlet(servletName, dispatcherServlet);
 		if (registration == null) {
 			throw new IllegalStateException("Failed to register servlet with name '" + servletName + "'. " +
 					"Check if there is another servlet registered under the same name.");
 		}
 
+		// 启动时加载
 		registration.setLoadOnStartup(1);
 		registration.addMapping(getServletMappings());
 		registration.setAsyncSupported(isAsyncSupported());
 
+		// 过滤器
 		Filter[] filters = getServletFilters();
 		if (!ObjectUtils.isEmpty(filters)) {
 			for (Filter filter : filters) {
+				// 注册过滤器
 				registerServletFilter(servletContext, filter);
 			}
 		}

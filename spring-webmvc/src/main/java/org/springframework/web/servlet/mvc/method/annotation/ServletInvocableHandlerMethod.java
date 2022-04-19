@@ -16,15 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.concurrent.Callable;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
@@ -44,6 +35,14 @@ import org.springframework.web.method.support.InvocableHandlerMethod;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.View;
 import org.springframework.web.util.NestedServletException;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.concurrent.Callable;
 
 /**
  * Extends {@link InvocableHandlerMethod} with the ability to handle return
@@ -103,8 +102,10 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 	public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
 
-		// ★★★ 调用处理器，封装参数、并拿到返回值
+		// ★★★ 调用目标方法，封装参数、并拿到返回值
 		Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);
+
+		// 设置相关返回状态
 		setResponseStatus(webRequest);
 
 		if (returnValue == null) {
@@ -122,6 +123,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 		mavContainer.setRequestHandled(false);
 		Assert.state(this.returnValueHandlers != null, "No return value handlers");
 		try {
+			// 遍历返回值解析器 returnValueHandlers，看看哪一个支持解析该返回值
 			this.returnValueHandlers.handleReturnValue(
 					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
 		}

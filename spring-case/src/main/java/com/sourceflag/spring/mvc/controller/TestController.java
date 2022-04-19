@@ -2,7 +2,10 @@ package com.sourceflag.spring.mvc.controller;
 
 import lombok.Data;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
@@ -10,6 +13,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 由 RequestMappingHandlerMapping 来处理 @RequestMapping 注解
+ */
 @Controller
 public class TestController {
 
@@ -32,7 +38,13 @@ public class TestController {
         return "index";
     }
 
-    @Data
+	@ModelAttribute
+	public void populateModel(@RequestParam(required = false) String abc, Model model) {
+		System.out.println("==== 调用了 modelAttribute 方法 ====");
+		model.addAttribute("attributeName", abc);
+	}
+
+	@Data
 	public static class UserEntity {
 		private String name;
 		private Integer age;

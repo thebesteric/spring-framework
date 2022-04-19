@@ -14,7 +14,14 @@ public class App {
         // Context context = tomcat.addContext("/", System.getProperty("java.io.tmpdir"));
         // context.addLifecycleListener((LifecycleListener) Class.forName(tomcat.getHost().getConfigClass()).newInstance());
 
-        tomcat.addWebapp("/", "D:\\Documents\\Java\\Spring\\spring\\spring-framework-5.3.2\\spring-case\\src\\main\\webapp");
+		// String docBase = "D:\\Documents\\Java\\Spring\\spring\\spring-framework-5.3.2\\spring-case\\src\\main\\webapp";
+		String docBase = "/Users/keisun/IdeaProjects/research/source/spring/spring-framework-5.3.2/spring-case/src/main/webapp";
+
+		/*
+		 * / 表示所有的请求都会被 DispatcherServlet 所匹配
+		 * DispatcherServlet: 称为前端控制值，可以理解为是请求的调度中心
+		 */
+        tomcat.addWebapp("/", docBase);
 
         tomcat.start();
         tomcat.getServer().await();

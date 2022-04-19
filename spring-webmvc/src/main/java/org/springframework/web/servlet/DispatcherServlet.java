@@ -16,29 +16,8 @@
 
 package org.springframework.web.servlet;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -65,6 +44,15 @@ import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.util.NestedServletException;
 import org.springframework.web.util.ServletRequestPathUtils;
 import org.springframework.web.util.WebUtils;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Central dispatcher for HTTP request handlers/controllers, e.g. for web UI controllers
@@ -589,8 +577,13 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initHandlerMappings(ApplicationContext context) {
 		this.handlerMappings = null;
 
+		// 是否检测容器中所有的 HandlerMappings
 		if (this.detectAllHandlerMappings) {
 			// Find all HandlerMappings in the ApplicationContext, including ancestor contexts.
+			// 先去容器中查找
+			// 此时容器中是可以找到的
+			// 因为 @EnableWebMvc 会 @Import(DelegatingWebMvcConfiguration.class)
+			// 而 DelegatingWebMvcConfiguration.class 继承了 WebMvcConfigurationSupport，完成了 HandlerMapping 的注册
 			Map<String, HandlerMapping> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
 			if (!matchingBeans.isEmpty()) {
@@ -611,7 +604,9 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		// Ensure we have at least one HandlerMapping, by registering
 		// a default HandlerMapping if no other mappings are found.
+		// 如果容器中没有找到，中从 DispatcherServlet.properties 配置文件中找
 		if (this.handlerMappings == null) {
+			// 去 DispatcherServlet.properties 配置文件中找
 			this.handlerMappings = getDefaultStrategies(context, HandlerMapping.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No HandlerMappings declared for servlet '" + getServletName() +
@@ -866,6 +861,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				// Load default strategy implementations from properties file.
 				// This is currently strictly internal and not meant to be customized
 				// by application developers.
+				// 去 DispatcherServlet.properties 找
 				ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
 				defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
 			}
@@ -921,6 +917,9 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * Exposes the DispatcherServlet-specific request attributes and delegates to {@link #doDispatch}
 	 * for the actual dispatching.
+	 *
+	 * DispatcherServlet -> FrameworkServlet#service -> HttpServlet#service -> FrameworkServlet#doGet
+	 * -> FrameworkServlet#processRequest -> DispatcherServlet#doService
 	 */
 	@Override
 	protected void doService(HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -1021,6 +1020,9 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * @param request current HTTP request
 	 * @param response current HTTP response
 	 * @throws Exception in case of any kind of processing failure
+	 *
+	 * DispatcherServlet -> FrameworkServlet#service -> HttpServlet#service -> FrameworkServlet#doGet
+	 * -> FrameworkServlet#processRequest -> DispatcherServlet#doService -> DispatcherServlet#doDispatch
 	 */
 	protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		HttpServletRequest processedRequest = request;
@@ -1041,6 +1043,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
+				// 1、处理器映射器：HandlerMapping
 				// ★★★ 推断使用哪一个 MappingHandler，返回一个处理器执行链（HandlerExecutionChain）
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
@@ -1049,13 +1052,14 @@ public class DispatcherServlet extends FrameworkServlet {
 				}
 
 				// Determine handler adapter for the current request.
-				// ★★★ 获取适配器
+				// ★★★ 获取处理器适配器
+				// 2、处理器适配器：HandlerAdapter，看哪一个 HandlerAdapter 可以适配该 handler
 				// Handler implement Controller		SimpleControllerHandlerAdapter
 				// @Controller						RequestMappingHandlerAdapter
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
 				// Process last-modified header, if supported by the handler.
-				// 获取请求方法
+				// 获取请求方法，这里有一个缓存机制
 				String method = request.getMethod();
 				boolean isGet = "GET".equals(method);
 				if (isGet || "HEAD".equals(method)) {
@@ -1071,7 +1075,8 @@ public class DispatcherServlet extends FrameworkServlet {
 				}
 
 				// Actually invoke the handler.
-				// ★★★ 执行处理器，调用 handler，封装参数、返回 ModelAndView
+				// 3、执行 handler 的方法
+				// ★★★ 执行处理器，调用 handler，封装参数、返回 ModelAndView，如果是 json 的话 mv 为 null
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 				if (asyncManager.isConcurrentHandlingStarted()) {
@@ -1093,7 +1098,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				dispatchException = new NestedServletException("Handler dispatch failed", err);
 			}
 
-			// ★★★ 渲染视图
+			// ★★★ 4-5、解析视图、渲染视图
 			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 		}
 		catch (Exception ex) {
@@ -1272,6 +1277,8 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	@Nullable
 	protected HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
+		// 获取所有的 handlerMappings（容器启动阶段初始化，拿到所有实现 HandlerMapping 接口的 bean）
+		// 如：RequestMappingHandlerMapping 是处理 @RequestMapping 注解的处理器映射器
 		if (this.handlerMappings != null) {
 			for (HandlerMapping mapping : this.handlerMappings) {
 				// 处理器 + 拦截器链

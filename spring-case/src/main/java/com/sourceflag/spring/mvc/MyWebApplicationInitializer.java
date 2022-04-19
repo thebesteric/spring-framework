@@ -16,7 +16,8 @@ import javax.servlet.ServletRegistration;
  * @date 2021-01-07 20:12
  * @since 1.0
  */
-public class MyWebApplicationInitializer implements WebApplicationInitializer {
+// 加了 abstract 就不会被 servlet 3.0 的规范所调用
+public abstract class MyWebApplicationInitializer implements WebApplicationInitializer {
 
 	/**
 	 * 因为 servlet 3.0 的一个新规范（ServletContainerInitializer），
@@ -28,6 +29,7 @@ public class MyWebApplicationInitializer implements WebApplicationInitializer {
 	 * spring-web\META-INF\services\javax.servlet.ServletContainerInitializer，是指需要实现的接口
 	 * javax.servlet.ServletContainerInitializer 文件里面的 org.springframework.web.SpringServletContainerInitializer 是实现类
 	 *
+	 * 注解 @HandlesTypes 是 javax.servlet.annotation.HandlesTypes 定义的注解
 	 * 注解 @HandlesTypes(WebApplicationInitializer.class) 会由容器进行解析里面定义的接口，找出所有实现类，并回调给 Set<Class<?>> webAppInitializerClasses
 	 * Spring 再对 webAppInitializerClasses 的子类进行遍历，分别调用其 onStartup 的方法
 	 *
@@ -36,6 +38,8 @@ public class MyWebApplicationInitializer implements WebApplicationInitializer {
 	 */
 	@Override
 	public void onStartup(ServletContext servletContext) throws ServletException {
+
+		System.out.println("=== MyWebApplicationInitializer 被调用了 ===");
 
 		// Load Spring web application configuration
 		AnnotationConfigWebApplicationContext ac = new AnnotationConfigWebApplicationContext();

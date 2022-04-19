@@ -10,6 +10,8 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * TestInterfaceController
  *
+ * 定义 @Bean 然后由 SimpleUrlHandlerMapping 来手动注册
+ *
  * @author Eric Joe
  * @version 1.0
  * @date 2021-01-10 21:59

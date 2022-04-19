@@ -16,21 +16,16 @@
 
 package org.springframework.web;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.Set;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ReflectionUtils;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HandlesTypes;
-
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import org.springframework.lang.Nullable;
-import org.springframework.util.ReflectionUtils;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 /**
  * Servlet 3.0 {@link ServletContainerInitializer} designed to support code-based
@@ -150,7 +145,7 @@ public class SpringServletContainerInitializer implements ServletContainerInitia
 			for (Class<?> waiClass : webAppInitializerClasses) {
 				// Be defensive: Some servlet containers provide us with invalid classes,
 				// no matter what @HandlesTypes says...
-				// 不是接口，不是抽象类
+				// 不是接口，不是抽象类，并且实现了 WebApplicationInitializer 接口
 				if (!waiClass.isInterface() && !Modifier.isAbstract(waiClass.getModifiers()) &&
 						WebApplicationInitializer.class.isAssignableFrom(waiClass)) {
 					try {

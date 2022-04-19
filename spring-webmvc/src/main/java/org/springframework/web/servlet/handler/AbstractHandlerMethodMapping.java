@@ -16,25 +16,6 @@
 
 package org.springframework.web.servlet.handler;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -48,6 +29,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for {@link HandlerMapping} implementations that define
@@ -210,8 +200,10 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * @see #handlerMethodsInitialized
 	 */
 	protected void initHandlerMethods() {
+		// 获取当前容器的所有 beanName
 		for (String beanName : getCandidateBeanNames()) {
 			if (!beanName.startsWith(SCOPED_TARGET_NAME_PREFIX)) {
+				// * 处理候选 bean，即解析 @RequestMapping 注解和映射路径
 				processCandidateBean(beanName);
 			}
 		}
@@ -252,7 +244,9 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 				logger.trace("Could not resolve type for bean '" + beanName + "'", ex);
 			}
 		}
+		// 判断类上是否有 @Controller 或 @RequestMapping 注解
 		if (beanType != null && isHandler(beanType)) {
+			// * 处理类的所有方法
 			detectHandlerMethods(beanName);
 		}
 	}
@@ -268,9 +262,11 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 
 		if (handlerType != null) {
 			Class<?> userType = ClassUtils.getUserClass(handlerType);
+			// 获取所有的方法：key = method，value = RequestMappingInfo（注解信息）
 			Map<Method, T> methods = MethodIntrospector.selectMethods(userType,
 					(MethodIntrospector.MetadataLookup<T>) method -> {
 						try {
+							// 返回 RequestMappingInfo
 							return getMappingForMethod(method, userType);
 						}
 						catch (Throwable ex) {
@@ -281,8 +277,11 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 			if (logger.isTraceEnabled()) {
 				logger.trace(formatMappings(userType, methods));
 			}
+
+			// 方法注册
 			methods.forEach((method, mapping) -> {
 				Method invocableMethod = AopUtils.selectInvocableMethod(method, userType);
+				// 注册到 pathLookup 和 registry 中
 				registerHandlerMethod(handler, invocableMethod, mapping);
 			});
 		}
@@ -382,19 +381,29 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	@Nullable
 	protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
 		List<Match> matches = new ArrayList<>();
+		// 从 this.pathLookup.get(urlPath); 找
 		List<T> directPathMatches = this.mappingRegistry.getMappingsByDirectPath(lookupPath);
 		if (directPathMatches != null) {
 			addMatchingMappings(directPathMatches, matches, request);
 		}
+
+		// 如果没有匹配到，则要不是错误的 url，要不是含有通配符的 url
 		if (matches.isEmpty()) {
+			// 从 this.registry 中找
 			addMatchingMappings(this.mappingRegistry.getRegistrations().keySet(), matches, request);
 		}
+		// 找到了
 		if (!matches.isEmpty()) {
 			Match bestMatch = matches.get(0);
 			if (matches.size() > 1) {
+
+				// 使用 AntPatternComparator 来进行排序的，排序规则：? > * > {} > **
 				Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));
 				matches.sort(comparator);
+
+				// 获取最匹配的
 				bestMatch = matches.get(0);
+
 				if (logger.isTraceEnabled()) {
 					logger.trace(matches.size() + " matching mappings: " + matches);
 				}
@@ -414,6 +423,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 			handleMatch(bestMatch.mapping, lookupPath, request);
 			return bestMatch.handlerMethod;
 		}
+		// 表示没有找到
 		else {
 			return handleNoMatch(this.mappingRegistry.getRegistrations().keySet(), lookupPath, request);
 		}
@@ -421,6 +431,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 
 	private void addMatchingMappings(Collection<T> mappings, List<Match> matches, HttpServletRequest request) {
 		for (T mapping : mappings) {
+			// mapping 就是 RequestMappingInfo
 			T match = getMatchingMapping(mapping, request);
 			if (match != null) {
 				matches.add(new Match(match,
@@ -608,11 +619,15 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		public void register(T mapping, Object handler, Method method) {
 			this.readWriteLock.writeLock().lock();
 			try {
+				// 封装 HandlerMethod
+				// handler 是 bean 的名字，method 是此时的方法
 				HandlerMethod handlerMethod = createHandlerMethod(handler, method);
 				validateMethodMapping(handlerMethod, mapping);
 
+				// 解析路径
 				Set<String> directPaths = AbstractHandlerMethodMapping.this.getDirectPaths(mapping);
 				for (String path : directPaths) {
+					// * pathLookup：Map<String, T>，key = 路径，value = RequestMappingInfo
 					this.pathLookup.add(path, mapping);
 				}
 
@@ -628,6 +643,8 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 					this.corsLookup.put(handlerMethod, config);
 				}
 
+				// 所有的 RequestMappingInfo 信息，是防止路径出现通配符的情况
+				// * this.registry：Map<T, MappingRegistration<T>>，key = RequestMappingInfo，value = MappingRegistration
 				this.registry.put(mapping, new MappingRegistration<>(mapping, handlerMethod, directPaths, name));
 			}
 			finally {

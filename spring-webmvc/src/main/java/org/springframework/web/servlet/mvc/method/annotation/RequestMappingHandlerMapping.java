@@ -16,17 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.MergedAnnotation;
@@ -53,6 +42,16 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping;
 import org.springframework.web.util.UrlPathHelper;
 import org.springframework.web.util.pattern.PathPatternParser;
+
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * Creates {@link RequestMappingInfo} instances from type and method-level
@@ -202,7 +201,7 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 			this.config.setRegisteredSuffixPatternMatch(useRegisteredSuffixPatternMatch());
 			this.config.setPathMatcher(getPathMatcher());
 		}
-
+		// 调用父类的方法
 		super.afterPropertiesSet();
 	}
 
@@ -269,10 +268,13 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	@Override
 	@Nullable
 	protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
+		// 将方法上的 @RequestMapping 注解解析成 RequestMappingInfo
 		RequestMappingInfo info = createRequestMappingInfo(method);
 		if (info != null) {
+			// 将类上的 @RequestMapping 注解解析成 RequestMappingInfo
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
 			if (typeInfo != null) {
+				// 合并注解
 				info = typeInfo.combine(info);
 			}
 			String prefix = getPathPrefix(handlerType);

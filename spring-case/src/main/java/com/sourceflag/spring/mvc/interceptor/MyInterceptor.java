@@ -19,6 +19,8 @@ public class MyInterceptor implements HandlerInterceptor {
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 		System.out.println("=========== MyInterceptor preHandle =============");
+		// true，表示继续往下执行
+		// false，请求将停止，不会在执行了
 		return true;
 	}
 

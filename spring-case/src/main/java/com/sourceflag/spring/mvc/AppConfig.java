@@ -1,15 +1,13 @@
 package com.sourceflag.spring.mvc;
 
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
-import com.sourceflag.spring.mvc.controller.TestHttpRequestHandlerController;
 import com.sourceflag.spring.mvc.controller.TestInterfaceController;
-import com.sourceflag.spring.mvc.controller.TestServlet;
 import com.sourceflag.spring.mvc.interceptor.MyInterceptor;
+import com.sourceflag.spring.mvc.servlet.TestServlet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.servlet.handler.SimpleServletHandlerAdapter;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
@@ -34,7 +32,7 @@ import java.util.Map;
 public class AppConfig implements WebMvcConfigurer {
 
 	/**
-	 * 视图处理
+	 * 视图解析器
 	 */
 	@Override
 	public void configureViewResolvers(ViewResolverRegistry registry) {
@@ -65,7 +63,7 @@ public class AppConfig implements WebMvcConfigurer {
 		Map<String, Object> urlMap = new HashMap<>();
 		urlMap.put("/testServlet.do", new TestServlet());
 		urlMap.put("/testInterfaceController.do", testInterfaceController());
-		urlMap.put("/testHttpRequestHandlerController.do", testHttpRequestHandlerController());
+		// urlMap.put("/testHttpRequestHandlerController.do", testHttpRequestHandlerController());
 		return new SimpleUrlHandlerMapping(urlMap);
 	}
 
@@ -75,10 +73,10 @@ public class AppConfig implements WebMvcConfigurer {
 		return new TestInterfaceController();
 	}
 
-	@Bean
-	public TestHttpRequestHandlerController testHttpRequestHandlerController() {
-		return new TestHttpRequestHandlerController();
-	}
+	// @Bean
+	// public TestHttpRequestHandlerController testHttpRequestHandlerController() {
+	// 	return new TestHttpRequestHandlerController();
+	// }
 
 
 	// 处理普通的 Servlet 的 Adapter
@@ -98,6 +96,4 @@ public class AppConfig implements WebMvcConfigurer {
 	public HttpRequestHandlerAdapter httpRequestHandlerAdapter() {
 		return new HttpRequestHandlerAdapter();
 	}
-
-
 }

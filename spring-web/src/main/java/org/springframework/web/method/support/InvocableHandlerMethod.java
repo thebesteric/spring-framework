@@ -16,15 +16,7 @@
 
 package org.springframework.web.method.support;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
-import org.springframework.core.CoroutinesUtils;
-import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.core.KotlinDetector;
-import org.springframework.core.MethodParameter;
-import org.springframework.core.ParameterNameDiscoverer;
+import org.springframework.core.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
@@ -33,6 +25,10 @@ import org.springframework.web.bind.support.SessionStatus;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.HandlerMethod;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
 /**
  * Extension of {@link HandlerMethod} that invokes the underlying method with
@@ -196,6 +192,7 @@ public class InvocableHandlerMethod extends HandlerMethod {
 			if (KotlinDetector.isSuspendingFunction(method)) {
 				return CoroutinesUtils.invokeSuspendingFunction(method, getBean(), args);
 			}
+			// 反射调用
 			return method.invoke(getBean(), args);
 		}
 		catch (IllegalArgumentException ex) {

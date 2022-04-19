@@ -16,18 +16,8 @@
 
 package org.springframework.web.context;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.servlet.ServletContext;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextException;
@@ -42,6 +32,14 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import javax.servlet.ServletContext;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Performs the actual initialization work for the root application context.
@@ -278,10 +276,12 @@ public class ContextLoader {
 		try {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
+			// xml 配置的情况下这里会是 null
 			if (this.context == null) {
 				// ★★★ 创建容器：XmlWebApplicationContext
 				this.context = createWebApplicationContext(servletContext);
 			}
+			// this.context 为父容器
 			if (this.context instanceof ConfigurableWebApplicationContext) {
 				ConfigurableWebApplicationContext cwac = (ConfigurableWebApplicationContext) this.context;
 				if (!cwac.isActive()) {
@@ -290,7 +290,7 @@ public class ContextLoader {
 					if (cwac.getParent() == null) {
 						// The context instance was injected without an explicit parent ->
 						// determine parent for root web application context, if any.
-						// 一个空实现，并没有父容器
+						// 一个空实现，一直返回 null，表示没有父容器
 						ApplicationContext parent = loadParentContext(servletContext);
 						cwac.setParent(parent);
 					}
@@ -298,6 +298,7 @@ public class ContextLoader {
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
+			// 将父容器保存在 context 的作用域中，在子容器就可以直接拿到了，完成父子容器的绑定
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
 			ClassLoader ccl = Thread.currentThread().getContextClassLoader();
@@ -395,9 +396,11 @@ public class ContextLoader {
 			}
 		}
 		// ★ 将 Spring 的上下文与 tomcat 的上下文联系到了一起
+		// 也就是将 servletContext 设置到 spring 上下文中，我们就可以通过实现 ServletContextAware 接口拿到 servletContext
+		// 从而可以注册 filter 或者 listener
 		wac.setServletContext(sc);
 
-		// ★★★ 获取 contextConfigLocation 的值
+		// ★★★ XML 到方式：获取 contextConfigLocation 的值
 		// <context-param>
 		//     <param-name>contextConfigLocation</param-name>
 		//     <param-value>classpath:spring/spring.xml</param-value>
@@ -415,6 +418,8 @@ public class ContextLoader {
 			((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
 		}
 
+		// 取得 web.xml 中配置的 contextInitializerClasses 和 globalInitializerClasses 对应的初始化器，并执行初始化操作，需自定义初始化器
+		// initializer.initialize(wac)
 		customizeContext(sc, wac);
 
 		// ★★★ 开始刷新容器
@@ -439,6 +444,12 @@ public class ContextLoader {
 	 * @see ApplicationContextInitializer#initialize(ConfigurableApplicationContext)
 	 */
 	protected void customizeContext(ServletContext sc, ConfigurableWebApplicationContext wac) {
+
+		// 从 web.xml 中找 globalInitializerClasses 和 contextInitializerClasses
+		// <context-param>
+		// 		<param-name>contextInitializerClasses</param-name>
+		//  	<param-value>xxx.xxx.MyApplicationContextInitializer.class</param-value>
+		// </context-param>
 		List<Class<ApplicationContextInitializer<ConfigurableApplicationContext>>> initializerClasses =
 				determineContextInitializerClasses(sc);
 
@@ -457,6 +468,7 @@ public class ContextLoader {
 
 		AnnotationAwareOrderComparator.sort(this.contextInitializers);
 		for (ApplicationContextInitializer<ConfigurableApplicationContext> initializer : this.contextInitializers) {
+			// 执行 initializer 的 initialize 方法
 			initializer.initialize(wac);
 		}
 	}

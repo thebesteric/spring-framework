@@ -1,5 +1,6 @@
 package com.sourceflag.spring.mvc.controller;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.HttpRequestHandler;
 
 import javax.servlet.ServletException;
@@ -10,11 +11,14 @@ import java.io.IOException;
 /**
  * TestHttpRequestHandler
  *
+ * 由 BeanNameUrlHandlerMapping 来解析
+ *
  * @author Eric Joe
  * @version 1.0
  * @date 2021-01-10 21:57
  * @since 1.0
  */
+@Component("/testHttpRequestHandlerController.do")
 public class TestHttpRequestHandlerController implements HttpRequestHandler {
 	@Override
 	public void handleRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

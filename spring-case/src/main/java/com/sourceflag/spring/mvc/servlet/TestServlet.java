@@ -1,10 +1,5 @@
-package com.sourceflag.spring.mvc.controller;
+package com.sourceflag.spring.mvc.servlet;
 
-import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.Controller;
-
-import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,6 +19,11 @@ import java.io.PrintWriter;
 public class TestServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
+
+	/**
+	 * 这里会先调用父类的 service(req, resp); 方法，通过 req.getMethod(); 判断方法
+	 * 从而对应去调用 doGet(req, resp); 或 doPost(req, resp);
+	 */
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
