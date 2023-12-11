@@ -63,7 +63,7 @@ public class Demo2 {
 
 		// 实例化
 		Class<?> beanClass = beanDefinition.getBeanClass();
-		Object instanceBean = beanClass.newInstance();
+		Object instanceBean = beanClass.getDeclaredConstructor().newInstance();
 
 		// 加入一级缓存（单例池）
 		singletonObjects.put(beanName, instanceBean);

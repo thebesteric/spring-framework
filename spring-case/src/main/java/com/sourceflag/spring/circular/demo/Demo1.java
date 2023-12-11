@@ -48,7 +48,7 @@ public class Demo1 {
 
 		// 实例化
 		Class<?> beanClass = beanDefinition.getBeanClass();
-		Object instanceBean = beanClass.newInstance();
+		Object instanceBean = beanClass.getDeclaredConstructor().newInstance();
 
 		// 属性赋值
 		Field[] declaredFields = beanClass.getDeclaredFields();

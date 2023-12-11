@@ -122,7 +122,7 @@ public class Demo6 {
 
 		// 实例化
 		Class<?> beanClass = beanDefinition.getBeanClass();
-		Object instanceBean = beanClass.newInstance();
+		Object instanceBean = beanClass.getDeclaredConstructor().newInstance();
 
 		singletonFactories.put(beanName, () -> {
 			return new JdkProxyBeanPostProcessor().getEarlyBeanReference(instanceBean, beanName);

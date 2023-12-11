@@ -63,7 +63,7 @@ public class Demo4 {
 
 		// 实例化
 		Class<?> beanClass = beanDefinition.getBeanClass();
-		Object instanceBean = beanClass.newInstance();
+		Object instanceBean = beanClass.getDeclaredConstructor().newInstance();
 
 		// 创建动态代理（BeanPostProcessor），只有出现循环依赖的时候，才会在实例化之后，提前创建
 		// 如何判断当前是不是循环依赖？
