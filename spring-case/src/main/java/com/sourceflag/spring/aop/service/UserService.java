@@ -17,6 +17,9 @@ public class UserService implements UserServiceInterface {
 	@Autowired
 	private UserService userService;
 
+	@Autowired
+	private OrderService orderService;
+
 	@Override
 	public String test() {
 		System.out.println("user test");

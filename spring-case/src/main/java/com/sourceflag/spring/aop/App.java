@@ -2,6 +2,7 @@ package com.sourceflag.spring.aop;
 
 import com.sourceflag.spring.aop.demo.SimpleCalculate;
 import com.sourceflag.spring.aop.service.OrderService;
+import com.sourceflag.spring.aop.service.UserService;
 import com.sourceflag.spring.aop.service.UserServiceInterface;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator;
@@ -36,7 +37,7 @@ public class App {
 		// ProgramCalculate programCalculate = (ProgramCalculate) ctx.getBean("simpleCalculate");
 		// programCalculate.toBinary(1);
 
-		UserServiceInterface userService = ctx.getBean(UserServiceInterface.class);
+		UserService userService = ctx.getBean(UserService.class);
 		// 因为 UserService 实现了接口，所以 Spring 会使用 JDK 动态代理
 		// 除非 proxyTargetClass = true 会强制使用 CGLIB 动态代理
 		userService.test();
