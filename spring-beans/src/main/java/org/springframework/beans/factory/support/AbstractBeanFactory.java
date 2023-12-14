@@ -394,6 +394,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 如果 requiredType 不是当前 bean 的类型，则可能需要类型转化
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {
+				// 使用 TypeConverter 尝试进行类型转换
 				Object convertedBean = getTypeConverter().convertIfNecessary(bean, requiredType);
 				if (convertedBean == null) {
 					throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());

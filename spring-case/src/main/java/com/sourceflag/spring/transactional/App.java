@@ -34,7 +34,7 @@ public class App {
 	}
 
 	@Configuration
-	@ComponentScan("com.sourceflag.spring.transactional")
+	@ComponentScan({"com.sourceflag.spring.transactional.service"})
 	@MapperScan("com.sourceflag.spring.transactional.mapper")
 	// @EnableAspectJAutoProxy(proxyTargetClass = true)
 	@EnableAspectJAutoProxy(exposeProxy = true)

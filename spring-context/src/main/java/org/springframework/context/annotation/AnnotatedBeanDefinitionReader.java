@@ -258,6 +258,7 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable BeanDefinitionCustomizer[] customizers) {
 
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
+		// 查找是否有 @Conditional 注解，来决定是否忽略
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
@@ -268,6 +269,7 @@ public class AnnotatedBeanDefinitionReader {
 		// 生成 beanName
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+		// 解析类上面的相关注解：@Lazy、@Primary、@DependsOn、@Role、@Description
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {

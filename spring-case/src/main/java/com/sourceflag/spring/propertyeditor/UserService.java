@@ -17,4 +17,8 @@ public class UserService {
 	public UserService() {
 
 	}
+
+	public void setAdminUser(User adminUser) {
+		this.adminUser = adminUser;
+	}
 }

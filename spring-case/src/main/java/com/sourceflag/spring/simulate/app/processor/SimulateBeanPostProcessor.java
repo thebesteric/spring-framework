@@ -2,7 +2,6 @@ package com.sourceflag.spring.simulate.app.processor;
 
 import com.sourceflag.spring.simulate.framework.BeanPostProcessor;
 import com.sourceflag.spring.simulate.framework.anno.Component;
-import org.apache.ibatis.executor.loader.cglib.CglibProxyFactory;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
@@ -14,6 +13,7 @@ public class SimulateBeanPostProcessor implements BeanPostProcessor {
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws Exception {
+		System.out.println(beanName + "======初始化前=====");
 		return bean;
 	}
 

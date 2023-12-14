@@ -18,7 +18,8 @@ public class LogoutListener {
 	@Async
 	@EventListener
 	public void listen(LogoutEvent event) {
-		System.out.println(Thread.currentThread().getName() + " LogoutListener");
+		LoginUser loginUser = (LoginUser) event.getSource();
+		System.out.println("【登出】" + Thread.currentThread().getName() + " LogoutListener: " + loginUser + " = " + event.getTimestamp());
 	}
 
 }

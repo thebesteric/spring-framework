@@ -29,8 +29,8 @@ public class UserService {
 
 	@Transactional(rollbackFor = Exception.class)
 	public void test() {
-		userMapper.insert1(new User("test"));
-		userService.test1();
+		// userMapper.insert1(new User("test"));
+		// userService.test1();
 		System.out.println("completed");
 	}
 

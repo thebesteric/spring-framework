@@ -2,7 +2,7 @@ package com.sourceflag.spring.simulate.framework;
 
 import lombok.Data;
 
-// @Data
+@Data
 public class BeanDefinition {
 	private Class<?> type;
 	private String scope;

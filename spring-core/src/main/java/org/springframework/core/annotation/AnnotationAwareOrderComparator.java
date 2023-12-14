@@ -16,14 +16,14 @@
 
 package org.springframework.core.annotation;
 
-import java.lang.reflect.AnnotatedElement;
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.core.DecoratingProxy;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.lang.Nullable;
+
+import java.lang.reflect.AnnotatedElement;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * {@code AnnotationAwareOrderComparator} is an extension of
@@ -61,10 +61,12 @@ public class AnnotationAwareOrderComparator extends OrderComparator {
 	@Override
 	@Nullable
 	protected Integer findOrder(Object obj) {
+		// 是否实现了 Ordered 接口
 		Integer order = super.findOrder(obj);
 		if (order != null) {
 			return order;
 		}
+		// 是否有 @Order 注解
 		return findOrderFromAnnotation(obj);
 	}
 
@@ -72,6 +74,7 @@ public class AnnotationAwareOrderComparator extends OrderComparator {
 	private Integer findOrderFromAnnotation(Object obj) {
 		AnnotatedElement element = (obj instanceof AnnotatedElement ? (AnnotatedElement) obj : obj.getClass());
 		MergedAnnotations annotations = MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY);
+		// 查找 @Order 注解，并返回 order 值
 		Integer order = OrderUtils.getOrderFromAnnotations(element, annotations);
 		if (order == null && obj instanceof DecoratingProxy) {
 			return findOrderFromAnnotation(((DecoratingProxy) obj).getDecoratedClass());

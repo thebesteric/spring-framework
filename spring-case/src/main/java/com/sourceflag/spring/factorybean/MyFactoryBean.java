@@ -11,6 +11,13 @@ public class MyFactoryBean implements SmartFactoryBean<UserService> {
 		// 是否要提前创建
 		return false;
 	}
+
+	@Override
+	public boolean isSingleton() {
+		// 是否单例
+		return true;
+	}
+
 	@Override
 	public UserService getObject() throws Exception {
 		return new UserService();

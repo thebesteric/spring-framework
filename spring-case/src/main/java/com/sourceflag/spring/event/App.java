@@ -1,17 +1,15 @@
 package com.sourceflag.spring.event;
 
 import com.sourceflag.spring.event.listener.LoginEvent;
-import com.sourceflag.spring.event.listener.LoginListener;
 import com.sourceflag.spring.event.listener.LoginUser;
+import com.sourceflag.spring.event.listener.LogoutEvent;
 import org.springframework.beans.factory.BeanFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -26,30 +24,35 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class App {
 	public static void main(String[] args) {
-		AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext();
-		ac.register(AppConfig.class);
-		ac.refresh();
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+		context.register(AppConfig.class);
+		context.refresh();
 
-		ac.addApplicationListener(new LoginListener());
+		// context.addApplicationListener(new LoginListener());
 
-		// SimpleApplicationEventMulticaster multicaster = ac.getBean(SimpleApplicationEventMulticaster.class);
-		// multicaster.setTaskExecutor(ac.getBean(ThreadPoolTaskExecutor.class));
+		// SimpleApplicationEventMulticaster multicaster = context.getBean(SimpleApplicationEventMulticaster.class);
+		// multicaster.setTaskExecutor(context.getBean(ThreadPoolTaskExecutor.class));
 
-		// ApplicationEventPublisher publisher = ac.getBean(ApplicationEventPublisher.class);
+		// ApplicationEventPublisher publisher = context.getBean(ApplicationEventPublisher.class);
 
 		LoginUser loginUser = new LoginUser(1, "eric");
 
 		LoginEvent loginEvent = new LoginEvent(loginUser, System.currentTimeMillis());
-		ac.publishEvent(loginEvent);
+		context.publishEvent(loginEvent); // 底层调用的就是 ApplicationEventPublisher 来发布
 		// publisher.publishEvent(loginEvent);
-		System.out.println(Thread.currentThread().getName() + " publish OVER");
+		System.out.println(Thread.currentThread().getName() + " publish loginEvent OVER");
 
-		// 发布 ContextStartedEvent
-		ac.start();
-		// 发布 ContextStoppedEvent
-		ac.stop();
-		// 发布 ContextClosedEvent
-		ac.close();
+
+		LogoutEvent logoutEvent = new LogoutEvent(loginUser, System.currentTimeMillis());
+		context.publishEvent(logoutEvent);
+		System.out.println(Thread.currentThread().getName() + " publish logoutEvent OVER");
+
+		// 自动发布 ContextStartedEvent 事件
+		context.start();
+		// 自动发布 ContextStoppedEvent 事件
+		context.stop();
+		// 自动发布 ContextClosedEvent 事件
+		context.close();
 	}
 
 	@Configuration

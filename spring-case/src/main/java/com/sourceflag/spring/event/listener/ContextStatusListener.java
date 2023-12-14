@@ -18,28 +18,28 @@ public class ContextStatusListener {
 	@EventListener(ContextStartedEvent.class)
 	public void onStarted(ContextStartedEvent event) {
 		if (event.getApplicationContext().getParent() == null) {
-			System.out.println("spring started...");
+			System.out.println(Thread.currentThread().getName() + ": spring started...");
 		}
 	}
 
 	@EventListener(ContextRefreshedEvent.class)
 	public void onRefreshed(ContextRefreshedEvent event) {
 		if (event.getApplicationContext().getParent() == null) {
-			System.out.println("spring refreshed...");
+			System.out.println(Thread.currentThread().getName() + ": spring refreshed...");
 		}
 	}
 
 	@EventListener(ContextStoppedEvent.class)
 	public void onStopped(ContextStoppedEvent event) {
 		if (event.getApplicationContext().getParent() == null) {
-			System.out.println("spring stopped...");
+			System.out.println(Thread.currentThread().getName() + ": spring stopped...");
 		}
 	}
 
 	@EventListener(ContextClosedEvent.class)
 	public void onClosed(ContextClosedEvent event) {
 		if (event.getApplicationContext().getParent() == null) {
-			System.out.println("spring closed...");
+			System.out.println(Thread.currentThread().getName() + ": spring closed...");
 		}
 	}
 

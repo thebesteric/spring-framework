@@ -10,9 +10,10 @@ public class LogoutEvent extends ApplicationEvent {
 
 	private static final long serialVersionUID = -1L;
 
-	private String name;
+	private long timestamp;
 
-	public LogoutEvent(Object source) {
+	public LogoutEvent(Object source, long timestamp) {
 		super(source);
+		this.timestamp = timestamp;
 	}
 }
