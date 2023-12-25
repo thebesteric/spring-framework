@@ -1,5 +1,7 @@
 package com.sourceflag.spring.test.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,4 +13,21 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class UserService {
+
+	@Autowired
+	private static A a;
+
+	@Autowired
+	private B b;
+
+	public void test() {
+		System.out.println("a = " + a);
+		System.out.println("b = " + getB());
+	}
+
+	@Lookup("b")
+	public B getB() {
+		return null;
+	}
+
 }

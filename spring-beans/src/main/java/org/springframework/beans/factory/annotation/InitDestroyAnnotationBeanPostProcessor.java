@@ -16,26 +16,8 @@
 
 package org.springframework.beans.factory.annotation;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
@@ -47,6 +29,16 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
@@ -100,9 +92,13 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	protected transient Log logger = LogFactory.getLog(getClass());
 
+	// 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
+	// ⭐️ initAnnotationType = @PostConstruct
 	@Nullable
 	private Class<? extends Annotation> initAnnotationType;
 
+	// 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
+	// ⭐️ destroyAnnotationType = @PreDestroy
 	@Nullable
 	private Class<? extends Annotation> destroyAnnotationType;
 
@@ -150,10 +146,13 @@ public class InitDestroyAnnotationBeanPostProcessor
 		metadata.checkConfigMembers(beanDefinition);
 	}
 
+	// 初始化前执行
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		// ⭐️ 找到 @PostConstruct 和 @PreDestroy 注解的方法
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
+			// ⭐️ 执行初始化方法：@PostConstruct
 			metadata.invokeInitMethods(bean, beanName);
 		}
 		catch (InvocationTargetException ex) {
@@ -174,6 +173,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 	public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
+			// 执行销毁方法
 			metadata.invokeDestroyMethods(bean, beanName);
 		}
 		catch (InvocationTargetException ex) {
@@ -190,15 +190,20 @@ public class InitDestroyAnnotationBeanPostProcessor
 		}
 	}
 
+	// bean 生命周期最后一步执行，判断是否需要执行销毁方法
+	// ⭐️ 找到 @PostConstruct 和 @PreDestroy 注解的方法
 	@Override
 	public boolean requiresDestruction(Object bean) {
+		// 判断是否有销毁的方法，如果定义了 @PreDestroy，那么就一定有
 		return findLifecycleMetadata(bean.getClass()).hasDestroyMethods();
 	}
 
 
+	// ⭐️ 找到 @PostConstruct 和 @PreDestroy 注解的方法
 	private LifecycleMetadata findLifecycleMetadata(Class<?> clazz) {
 		if (this.lifecycleMetadataCache == null) {
 			// Happens after deserialization, during destruction...
+			// ⭐️ 找到 @PostConstruct 和 @PreDestroy 注解的方法
 			return buildLifecycleMetadata(clazz);
 		}
 		// Quick check on the concurrent map first, with minimal locking.
@@ -221,8 +226,11 @@ public class InitDestroyAnnotationBeanPostProcessor
 			return this.emptyLifecycleMetadata;
 		}
 
+		// 初始化方法
 		List<LifecycleElement> initMethods = new ArrayList<>();
+		// 销毁方法
 		List<LifecycleElement> destroyMethods = new ArrayList<>();
+
 		Class<?> targetClass = clazz;
 
 		do {
@@ -230,6 +238,8 @@ public class InitDestroyAnnotationBeanPostProcessor
 			final List<LifecycleElement> currDestroyMethods = new ArrayList<>();
 
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				// ⭐️ 判断方法上面是否有 initAnnotationType 的注解，这个注解就是 @PostConstruct
+				// 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
 				if (this.initAnnotationType != null && method.isAnnotationPresent(this.initAnnotationType)) {
 					LifecycleElement element = new LifecycleElement(method);
 					currInitMethods.add(element);
@@ -237,6 +247,8 @@ public class InitDestroyAnnotationBeanPostProcessor
 						logger.trace("Found init method on class [" + clazz.getName() + "]: " + method);
 					}
 				}
+				// ⭐️ 判断方法上面是否有 destroyAnnotationType 的注解，这个注解就是 @PreDestroy
+				// 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
 				if (this.destroyAnnotationType != null && method.isAnnotationPresent(this.destroyAnnotationType)) {
 					currDestroyMethods.add(new LifecycleElement(method));
 					if (logger.isTraceEnabled()) {
@@ -245,10 +257,15 @@ public class InitDestroyAnnotationBeanPostProcessor
 				}
 			});
 
+			// 加入初始化方法，index = 0 的作用是，初始化方法是先调用父类，在执行子类
 			initMethods.addAll(0, currInitMethods);
+			// 加入销毁方法，这里是往后添加，那么就是先执行子类的销毁，在执行父类的销毁
 			destroyMethods.addAll(currDestroyMethods);
+
+			// 找到父亲，看父类是否有初始化或销毁方法
 			targetClass = targetClass.getSuperclass();
 		}
+		// 遍历父类
 		while (targetClass != null && targetClass != Object.class);
 
 		return (initMethods.isEmpty() && destroyMethods.isEmpty() ? this.emptyLifecycleMetadata :
@@ -330,6 +347,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 					if (logger.isTraceEnabled()) {
 						logger.trace("Invoking init method on bean '" + beanName + "': " + element.getMethod());
 					}
+					// 执行 @PostConstruct 注解的方法
 					element.invoke(target);
 				}
 			}

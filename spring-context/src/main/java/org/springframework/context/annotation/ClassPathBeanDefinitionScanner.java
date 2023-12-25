@@ -58,6 +58,7 @@ import java.util.Set;
  */
 public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateComponentProvider {
 
+	// BeanDefinitionRegistry 的实现类是 DefaultListableBeanFactory
 	private final BeanDefinitionRegistry registry;
 
 	private BeanDefinitionDefaults beanDefinitionDefaults = new BeanDefinitionDefaults();
@@ -250,7 +251,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	public int scan(String... basePackages) {
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
-		// 开始扫描
+		// ⭐️核心逻辑：开始扫描
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
@@ -275,8 +276,10 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		// 循环包路径
 		for (String basePackage : basePackages) {
-			// ★★★ 找到候选的 Components
+
+			// ⭐️ 找到候选的 Components（开始扫描）
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+
 			for (BeanDefinition candidate : candidates) {
 				// 解析 @Scope 注解的信息
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
@@ -285,7 +288,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				// 如果类的第一个字母和第二个字母都是大写，直接返回，比如说有一个类是 ABTest，那么他的 beanName 也就是 ABTest
 				// 其他情况返回首字母小写
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
-				// ★★★ 设置默认的一些 bean 定义，如 lazy，autowired-model，init-method，destroy-method
+
+				// ⭐️ 设置默认的一些 bean 定义，如 lazy，autowired-model，init-method，destroy-method
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
@@ -293,15 +297,16 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+
 				// 检查 beanDefinition 是否已经存在
-				// 如果存在相同的，则抛出异常
+				// 如果存在相同名字的 BD，则抛出异常， 这里也会检查是否是多次扫描的逻辑
 				if (checkCandidate(beanName, candidate)) {
 					// 将 BD 封装成一个 BeanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
-					// ★ 注册到容器 beanDefinitionMap 中
+					// ⭐️ 注册到容器 beanDefinitionMap 中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -316,8 +321,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @param beanName the generated bean name for the given bean
 	 */
 	protected void postProcessBeanDefinition(AbstractBeanDefinition beanDefinition, String beanName) {
-		// 设置默认值
+		// 给 BD 设置默认值
 		beanDefinition.applyDefaults(this.beanDefinitionDefaults);
+
 		if (this.autowireCandidatePatterns != null) {
 			beanDefinition.setAutowireCandidate(PatternMatchUtils.simpleMatch(this.autowireCandidatePatterns, beanName));
 		}
@@ -347,6 +353,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * bean definition has been found for the specified name
 	 */
 	protected boolean checkCandidate(String beanName, BeanDefinition beanDefinition) throws IllegalStateException {
+		// beanDefinitionMap 中没有这个名字的 BD
 		if (!this.registry.containsBeanDefinition(beanName)) {
 			return true;
 		}
@@ -356,11 +363,11 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		if (originatingDef != null) {
 			existingDef = originatingDef;
 		}
-		// 是否兼容，如果兼容返回 false，则不会注册到 spring 容器中
+		// 是否兼容，如果兼容返回 false，但是也不会注册到 spring 容器中
 		// 这种情况突然发生在对同一个路径下扫描了多次
 		// eg.
-		// ac.register(AppConfig1.class)
-		// ac.register(AppConfig2.class)
+		// ctx.register(AppConfig1.class)
+		// ctx.register(AppConfig2.class)
 		if (isCompatible(beanDefinition, existingDef)) {
 			return false;
 		}
@@ -381,6 +388,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * new definition to be skipped in favor of the existing definition
 	 */
 	protected boolean isCompatible(BeanDefinition newDefinition, BeanDefinition existingDefinition) {
+		// 条件1. 如果不是 ScannedGenericBeanDefinition 返回：false，表示不是通过 scan 扫描出来的，可能是人为注册的
+		// 条件2. 第二次扫描和第一次扫描的 source 都相同，表示是同一个类，返回 true
+		// 条件3. 新的 BD 和 已经存在的 BD 相同，返回 true
 		return (!(existingDefinition instanceof ScannedGenericBeanDefinition) ||  // explicitly registered overriding bean
 				(newDefinition.getSource() != null && newDefinition.getSource().equals(existingDefinition.getSource())) ||  // scanned same file twice
 				newDefinition.equals(existingDefinition));  // scanned equivalent class twice

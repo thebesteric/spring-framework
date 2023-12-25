@@ -227,7 +227,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
-		// 找出所有加了 @Autowired 的元数据（field，method）
+		// ⭐️ 找出所有加了 @Autowired 的元数据（field，method）
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
 		metadata.checkConfigMembers(beanDefinition);
 	}
@@ -424,12 +424,13 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
-		// ★★★ 获取需要注入的所有元数据（注入点）
+		// ⭐️ 获取需要注入的所有元数据（注入点），当执行到这个方法到时候，postProcessMergedBeanDefinition 这个方法已经执行过了
+		// 所以这里是直接从缓存中获取注入点信息
 		// 1、查找标记有 @Autowired 的 field
 		// 2、查找标记有 @Autowired 的 method
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
-			// ★★★ 关键代码：真正的开始注入属性
+			// ⭐️ 关键代码：真正的开始注入属性
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
@@ -475,11 +476,12 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	private InjectionMetadata findAutowiringMetadata(String beanName, Class<?> clazz, @Nullable PropertyValues pvs) {
 		// Fall back to class name as cache key, for backwards compatibility with custom callers.
-		// ★ 将类名作为缓存的名字，以便后面的程序调用
+		// ⭐️ 将类名作为缓存的名字，以便后面的程序调用
 		String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
 		// Quick check on the concurrent map first, with minimal locking.
-		// 先从缓存中查找
+		// 先从缓存中查找注入点（所有的注入点），包含 @Autowired，@Value，@Inject
 		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
+		// 判断 metadata 是否为空
 		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 			synchronized (this.injectionMetadataCache) {
 				metadata = this.injectionMetadataCache.get(cacheKey);
@@ -487,8 +489,9 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
-					// ★★★ 关键代码：解析自动注入的元数据
+					// ⭐ 关键代码：解析自动注入的注入点（所有的注入点），包含 @Autowired，@Value，@Inject
 					metadata = buildAutowiringMetadata(clazz);
+					// 加入缓存
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}
 			}
@@ -498,7 +501,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	private InjectionMetadata buildAutowiringMetadata(final Class<?> clazz) {
 		// 检查 class 是否是候选类，如果是以 java. 开头的，就不需要找注入点
-		// autowiredAnnotationTypes 包含 @Autowired，@Value，@Inject
+		// ⭐️ autowiredAnnotationTypes 包含 @Autowired，@Value，@Inject
 		if (!AnnotationUtils.isCandidateClass(clazz, this.autowiredAnnotationTypes)) {
 			return InjectionMetadata.EMPTY;
 		}
@@ -509,12 +512,13 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		do {
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
 
-			// ★★★ 对于【字段】的处理：反射查找所有的类上面的 @Autowired，@Value 和 @Inject 的 field
+			// ⭐️ 对于【字段】的处理：反射查找所有的类上面的 @Autowired，@Value 和 @Inject 的 field
+			// ♻️ doWithLocalFields 会循环所有字段
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
-				// ★★★ 查找含有 @Autowired，@Value 和 @Inject 注解的属性
+				// ⭐️ 查找含有 @Autowired，@Value 和 @Inject 注解的属性
 				MergedAnnotation<?> ann = findAutowiredAnnotation(field);
 				if (ann != null) {
-					// 一个字段是 static 的，就不会进行自动注入
+					// 一个字段是 static 修饰的，就不会进行自动注入
 					if (Modifier.isStatic(field.getModifiers())) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation is not supported on static fields: " + field);
@@ -523,19 +527,22 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					}
 					// 根据注解，判断 @Autowired 注解是否有 required 值
 					boolean required = determineRequiredStatus(ann);
+					// 存储注入点：AutowiredFieldElement
 					currElements.add(new AutowiredFieldElement(field, required));
 				}
 			});
 
-			// ★★★ 对于【方法】的处理：反射查找所有的 @Autowired 的 method
+			// ⭐️ 对于【方法】的处理：反射查找所有的 @Autowired 的 method
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 
 				// 过滤掉桥接方法（某个类实现类一个接口，接口中有一个含有范型参数的方法，然后实现类实现类改方法，就会出现桥接方法）
+				// 从字节码层面来看，会存在两个相同的方法，其中一个有 synthetic bridge 修饰，就是侨界方法，Spring 会进行忽略
 				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
 					return;
 				}
-				// 查找含有 @Autowired 注解的方法
+
+				// ⭐️ 查找含有 @Autowired 注解的方法
 				MergedAnnotation<?> ann = findAutowiredAnnotation(bridgedMethod);
 				if (ann != null && method.equals(ClassUtils.getMostSpecificMethod(method, clazz))) {
 					// static 修饰的方法进行忽略
@@ -555,14 +562,16 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					// 根据注解，判断注解是否有 required 值
 					boolean required = determineRequiredStatus(ann);
 					PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+					// 存储注入点：AutowiredMethodElement
 					currElements.add(new AutowiredMethodElement(method, required, pd));
 				}
 			});
 			// 将 currElements 合并到 elements 集合中
 			elements.addAll(0, currElements);
-			// ★★★ 获取父类信息，这里就证明了，可以继承一个非 @Component 的类，来获取其含有 @Autowired 注解的属性
+			// ⭐️ 获取父类信息，这里就证明了，可以继承一个非 @Component 的类，来获取其含有 @Autowired 注解的属性
 			targetClass = targetClass.getSuperclass();
 		}
+		// 遍历父类
 		while (targetClass != null && targetClass != Object.class);
 
 		// InjectionMetadata 包括所有需要注入的点（属性，方法）
@@ -572,7 +581,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	@Nullable
 	private MergedAnnotation<?> findAutowiredAnnotation(AccessibleObject ao) {
 		MergedAnnotations annotations = MergedAnnotations.from(ao);
-		// ★★★ autowiredAnnotationTypes 会有 @Autowired，@Value 和 @Inject 三个值
+		// ⭐️ autowiredAnnotationTypes 包含 @Autowired，@Value 和 @Inject 三个值
 		for (Class<? extends Annotation> type : this.autowiredAnnotationTypes) {
 			// 获取注解上的属性
 			// @Autowired 有一个属性 require = true || false
@@ -688,7 +697,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				value = resolvedCachedArgument(beanName, this.cachedFieldValue);
 			}
 			else {
-				// ★ 将字段，封装为一个依赖描述
+				// 将字段，封装为一个依赖描述
 				DependencyDescriptor desc = new DependencyDescriptor(field, this.required);
 				desc.setContainingClass(bean.getClass());
 
@@ -696,7 +705,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				Assert.state(beanFactory != null, "No BeanFactory available");
 				TypeConverter typeConverter = beanFactory.getTypeConverter();
 				try {
-					// ★★★ 关键代码：执行 DI
+					// ⭐ 关键代码：执行 DI
 					// 返回需要注入的 bean 对象
 					// 如果存在循环依赖的情况，会调用 singletonFactories（二级缓存）中暴露的工厂方法
 					value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
@@ -730,7 +739,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				}
 			}
 			if (value != null) {
-				// ★★★ 关键代码：利用反射完成属性注入
+				// ⭐️ 关键代码：利用反射完成属性注入
 				// 这里就证明了其实 @Autowired 是通过反射来完成的
 				ReflectionUtils.makeAccessible(field);
 				field.set(bean, value);
@@ -758,6 +767,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			// 如果 pvs 中已经有当前注入的值了，则跳过
 			if (checkPropertySkipping(pvs)) {
 				return;
 			}
@@ -771,13 +781,14 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				int argumentCount = method.getParameterCount();
 				// 获取方法参数的个数
 				arguments = new Object[argumentCount];
+				// 生成一个描述器数组：这就证明了 set 方法可以设置多个对象
 				DependencyDescriptor[] descriptors = new DependencyDescriptor[argumentCount];
 				// 记录自动注入的 beanName
 				Set<String> autowiredBeans = new LinkedHashSet<>(argumentCount);
 				Assert.state(beanFactory != null, "No BeanFactory available");
 				TypeConverter typeConverter = beanFactory.getTypeConverter();
 
-				// ★★★ 遍历所有方法参数
+				// ⭐️ 遍历所有方法参数
 				// 这里就证明了通过 @Autowired 注解对于方法注入没有名字要求（不要求 setter 方法）
 				// 而且参数个数可以有多个
 				for (int i = 0; i < arguments.length; i++) {
@@ -786,6 +797,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					currDesc.setContainingClass(bean.getClass());
 					descriptors[i] = currDesc;
 					try {
+						// ⭐️ 核心方法，解析依赖关系
 						Object arg = beanFactory.resolveDependency(currDesc, beanName, autowiredBeans, typeConverter);
 						if (arg == null && !this.required) {
 							arguments = null;
@@ -825,7 +837,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			}
 			if (arguments != null) {
 				try {
-					// ★★★ 关键代码：利用反射完成属性注入
+					// ⭐️ 关键代码：利用反射完成属性注入
 					// 这里就证明了其实 @Autowired 是通过反射来完成的
 					ReflectionUtils.makeAccessible(method);
 					method.invoke(bean, arguments);

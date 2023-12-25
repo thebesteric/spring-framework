@@ -530,12 +530,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			// Tell the subclass to refresh the internal bean factory.
 			// （模板方法）得到一个是否可以刷新的 beanFactory
-			// ★★★ AnnotationConfigApplicationContext 其实就是获取 GenericApplicationContext 构造函数中 new 出来的 DefaultListableBeanFactory，不支持重复刷新的
+			// ⭐️ AnnotationConfigApplicationContext 其实就是获取 GenericApplicationContext 构造函数中 new 出来的 DefaultListableBeanFactory，不支持重复刷新的
 			// 而 SpringMVC 是通过 AnnotationConfigWebApplicationContext 获取的是 AbstractRefreshableApplicationContext 是支持重复刷新的
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
-			// ★★★ 准备 BeanFactory，也就是往 BeanFactory 添加如下：
+			// ⭐️ 准备 BeanFactory，也就是往 BeanFactory 添加如下：
 			// 1、设置 BeanFactory 的类加载器、SpringEL 表达式解析器、类型转化器
 			// 2、添加 2 个 BeanPostProcessor：ApplicationContextAwareProcessor、ApplicationListenerDetector
 			// 3、记录 6 个 ignoreDependencyInterface，这里和 bd 的 autowired 的类型相关
@@ -545,25 +545,25 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
-				// ★ 子类可以对 beanFactory 进一步初始化
+				// ⭐️ 子类可以对 beanFactory 进一步初始化
 				// 如 Spring MVC 就在这里给 beanFactory 添加了 servletContext
 				postProcessBeanFactory(beanFactory);
 
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 				// Invoke factory processors registered as beans in the context.
-				// ★★★ 执行 BeanDefinitionRegistryPostProcessor 和 BeanFactoryPostProcessors 两个接口
+				// ⭐️ 执行 BeanDefinitionRegistryPostProcessor 和 BeanFactoryPostProcessors 两个接口
 				// 此时 beanDefinitionMap 中至少有 6 个 BD（5 个基础 BD，和 1 个 AppConfig）
 				// 而这 6 个 BD 中，只有一个 BeanFactoryPostProcessor 就是 ConfigurationClassPostProcessor
-				// ★★★ 这里会执行 ConfigurationClassPostProcessor 进行 @Component 的扫描，扫描得到的 BD 会加入 beanDefinitionMap 中去
-				// ★ 注意：扫描过程中可能会发现程序员提供的 BeanFactoryPostProcessor，那么这些 BeanFactoryPostProcessor 会在后面执行
-				// ★★★ 完成了 bean 扫描(scan) 和 解析(parse)（类 --> beanDefinition），无论是单例还是原型的 bean 都会放到 beanDefinitionMap 中
+				// ⭐️ 这里会执行 ConfigurationClassPostProcessor 进行 @Component 的扫描，扫描得到的 BD 会加入 beanDefinitionMap 中去
+				// ⭐️ 注意：扫描过程中可能会发现程序员提供的 BeanFactoryPostProcessor，那么这些 BeanFactoryPostProcessor 会在后面执行
+				// ⭐️ 完成了 bean 扫描(scan) 和 解析(parse)（类 --> beanDefinition），无论是单例还是原型的 bean 都会放到 beanDefinitionMap 中
 				// 这里的解析，包括解析配置类，通过配置类获取需要扫描的包路径
 				// 这里也会完成第一次合并
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
 				// 添加 BeanPostProcessorChecker 后置处理器
-				// ★★★ 注册并获取所有的 BeanPostProcessor，并按照一定规则进行排序
+				// ⭐️ 注册并获取所有的 BeanPostProcessor，并按照一定规则进行排序
 				// 完成 BeanPostProcessor 的实例化过程
 				registerBeanPostProcessors(beanFactory);
 
@@ -577,7 +577,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
-				// ★★★ 初始化事件多播器
+				// ⭐️ 初始化事件多播器
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
@@ -586,19 +586,19 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				onRefresh();
 
 				// Check for listener beans and register them.
-				// ★★★ 注册监听器到事件多播器上
+				// ⭐️ 注册监听器到事件多播器上
 				// 1、注册一些以接口实现方式的监听器，添加到 applicationListenerBeans 中
 				// 2、当调用【第八次】调用后置处理器时，同时添加到 applicationListeners 中
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
-				// ★★★ IoC 的体现：开始实例化所有 非懒加载的单例 类，走了 validate 和 life 生命周期的两个步骤
+				// ⭐️ IoC 的体现：开始实例化所有 非懒加载的单例 类，走了 validate 和 life 生命周期的两个步骤
 				// 这行代码执行完毕后，完成了非懒加载的单例 bean 实例化，singletonObjects 里面就会有实例化好的对象实例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
 				// 执行容器的生命周期：SmartLifecycle 的 start 方法，同时将 this.running 的值设置为 true，表示容器已经开始运行
-				// ★ 发布了一个事件：ContextRefreshedEvent，表示容器已经刷新完成
+				// ⭐️ 发布了一个事件：ContextRefreshedEvent，表示容器已经刷新完成
 				finishRefresh();
 			}
 
@@ -991,7 +991,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
-		// ★★★ 实例化非懒加载的单例 bean
+		// ⭐️ 实例化非懒加载的单例 bean
 		beanFactory.preInstantiateSingletons();
 	}
 
@@ -1096,6 +1096,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Override
 	public void close() {
 		synchronized (this.startupShutdownMonitor) {
+			// 正常关闭的情况下：当通过 ctx.registerShutdownHook(); 也会调用 doCLose() 方法
+			// 即不需要我们手动调用 ctx.close() 了
 			doClose();
 			// If we registered a JVM shutdown hook, we don't need it anymore now:
 			// We've already explicitly closed the context.
@@ -1150,6 +1152,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 
 			// Destroy all cached singletons in the context's BeanFactory.
+			// 销毁容器中所有的单例 bean
 			destroyBeans();
 
 			// Close the state of this context itself.
@@ -1181,6 +1184,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see org.springframework.beans.factory.config.ConfigurableBeanFactory#destroySingletons()
 	 */
 	protected void destroyBeans() {
+		// 销毁所有单例 bean
 		getBeanFactory().destroySingletons();
 	}
 

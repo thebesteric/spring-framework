@@ -143,10 +143,12 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+		// ⭐️ 先调用父类的 isAutowireCandidate，如果匹配成功，在执行下面的匹配
 		// 判断 autowireCandidate 属性 和 范型
 		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
 		if (match) {
-			// 判断 @Qualifier 注解
+			// ⭐️ 判断 @Qualifier 注解
+			// descriptor.getAnnotations() 拿到的是属性或方法参数上的注解，获取不到方法上的注解
 			match = checkQualifiers(bdHolder, descriptor.getAnnotations());
 			if (match) {
 				MethodParameter methodParam = descriptor.getMethodParameter();
@@ -173,7 +175,10 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 			Class<? extends Annotation> type = annotation.annotationType();
 			boolean checkMeta = true;
 			boolean fallbackToMeta = false;
+			// 判断类上是否有 @Qualifier 注解
 			if (isQualifier(type)) {
+				// 当前注解是否是 @Qualifier，如果和当前 BeanDefinition 不匹配，则 fallbackToMeta 为 true，checkMeta 依然为 false
+				// 比如 @Random，他自己可以有一个 value 属性，并且上面还有一个 @Qualifier("random") 的注解
 				if (!checkQualifier(bdHolder, annotation, typeConverter)) {
 					fallbackToMeta = true;
 				}
@@ -185,6 +190,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 				boolean foundMeta = false;
 				for (Annotation metaAnn : type.getAnnotations()) {
 					Class<? extends Annotation> metaType = metaAnn.annotationType();
+					// 当前注解是否是 @Qualifier
 					if (isQualifier(metaType)) {
 						foundMeta = true;
 						// Only accept fallback match if @Qualifier annotation has a value...
@@ -348,10 +354,12 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	@Override
 	@Nullable
 	public Object getSuggestedValue(DependencyDescriptor descriptor) {
+		// 获取字段上 @Value 注解，并返回值
 		Object value = findValue(descriptor.getAnnotations());
 		if (value == null) {
 			MethodParameter methodParam = descriptor.getMethodParameter();
 			if (methodParam != null) {
+				// 获取方法参数上 @Value 注解，并返回值
 				value = findValue(methodParam.getMethodAnnotations());
 			}
 		}

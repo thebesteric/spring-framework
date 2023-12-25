@@ -1,9 +1,11 @@
 package com.sourceflag.spring.test;
 
+import com.sourceflag.spring.test.service.C;
+import com.sourceflag.spring.test.service.TestService;
+import com.sourceflag.spring.test.service.UserService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
 
 import java.io.IOException;
 
@@ -21,11 +23,13 @@ public class Test {
 		context.register(Config.class);
 		context.refresh();
 
+		context.registerShutdownHook();
+
 		// DefaultListableBeanFactory context = new DefaultListableBeanFactory();
-		//
+
 		// AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();
 		// beanDefinition.setBeanClass(UserService.class);
-		//
+
 		// context.registerBeanDefinition("userService", beanDefinition);
 
 		// AnnotatedBeanDefinitionReader reader = new AnnotatedBeanDefinitionReader(context);
@@ -37,14 +41,26 @@ public class Test {
 
 		// Resource resource = context.getResource("mybatis.xml");
 		// Resource resource = context.getResource("file:///Users/wangweijun/IdeaProjects/spring-framework/spring-case/src/main/resources/mybatis.xml");
-		Resource resource = context.getResource("classpath:mybatis.xml");
-		System.out.println(resource.getFile());
+		// Resource resource = context.getResource("classpath:mybatis.xml");
+		// System.out.println(resource.getFile());
 
-		Resource httpResource = context.getResource("https://www.baidu.com");
-		System.out.println(httpResource.getURL());
+		// Resource httpResource = context.getResource("https://www.baidu.com");
+		// System.out.println(httpResource.getURL());
 
 
-		System.out.println(context.getBean("userService"));
+		UserService userService = (UserService) context.getBean("userService");
+		System.out.println(userService);
+		userService.test();
+		userService.test();
+
+		C c = context.getBean(C.class);
+		System.out.println("c = " + c);
+		System.out.println(c.getB());
+
+
+		@SuppressWarnings({"rawtypes"})
+		TestService testService = context.getBean(TestService.class);
+		testService.test();
 	}
 
 	@Configuration

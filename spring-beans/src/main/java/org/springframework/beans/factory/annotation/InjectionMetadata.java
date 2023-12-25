@@ -116,9 +116,9 @@ public class InjectionMetadata {
 				(checkedElements != null ? checkedElements : this.injectedElements);
 		if (!elementsToIterate.isEmpty()) {
 			for (InjectedElement element : elementsToIterate) {
-				// InjectElement#inject 处理 @Resource
-				// AutowiredFieldElement#inject 处理 @Autowired 注解的字段
-				// AutowiredMethodElement#inject 处理 @Autowired 注解的方法
+				// ⭐️ InjectElement#inject 处理 @Resource
+				// ⭐️ AutowiredFieldElement#inject 处理 @Autowired 注解的字段
+				// ⭐️ AutowiredMethodElement#inject 处理 @Autowired 注解的方法
 				element.inject(target, beanName, pvs);
 			}
 		}

@@ -79,6 +79,7 @@ public abstract class BeanFactoryUtils {
 		if (!name.startsWith(BeanFactory.FACTORY_BEAN_PREFIX)) {
 			return name;
 		}
+		// 循环去除所有的 & 符号
 		return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
 			do {
 				beanName = beanName.substring(BeanFactory.FACTORY_BEAN_PREFIX.length());
@@ -258,13 +259,16 @@ public abstract class BeanFactoryUtils {
 			ListableBeanFactory lbf, Class<?> type, boolean includeNonSingletons, boolean allowEagerInit) {
 
 		Assert.notNull(lbf, "ListableBeanFactory must not be null");
-		// 从本容器中查找，根据类型找到 beanNames
+
+		// ⭐️ 从本容器中查找，根据类型找到 beanNames
+		// includeNonSingletons 为 true，表示包含非单例 bean，即所有的 bean
 		String[] result = lbf.getBeanNamesForType(type, includeNonSingletons, allowEagerInit);
 
 		// 从父容器中查找
 		if (lbf instanceof HierarchicalBeanFactory) {
 			HierarchicalBeanFactory hbf = (HierarchicalBeanFactory) lbf;
 			if (hbf.getParentBeanFactory() instanceof ListableBeanFactory) {
+				// ♻️ 递归从父容器中查找
 				String[] parentResult = beanNamesForTypeIncludingAncestors(
 						(ListableBeanFactory) hbf.getParentBeanFactory(), type, includeNonSingletons, allowEagerInit);
 				// 合并

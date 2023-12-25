@@ -102,10 +102,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/** Map between dependent bean names: bean name to Set of dependent bean names. */
 	// 某个 bean 被哪一些 bean 所依赖
+	// A 被 B、C dependOn 了
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
 	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies. */
 	// 某个 bean 依赖了哪一些 bean
+	// B dependOn A
+	// C dependOn A
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
 
@@ -230,7 +233,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				// ★★★ 关键代码：这里会将 beanName 放入正在创建 bean 的集合中
+				// ⭐️ 关键代码：这里会将 beanName 放入正在创建 bean 的集合中
 				// this.singletonsCurrentlyInCreation.add(beanName)
 				// 后面在实例化 bean 的过程中，会根据这个集合来进行逻辑判断该 bean 是否正在被创建
 				beforeSingletonCreation(beanName);
@@ -241,7 +244,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
-					// ★★★ 关键代码：调用 singletonFactory 的 getObject 方法
+					// ⭐️ 关键代码：调用 singletonFactory 的 getObject 方法
 					// 对应前面的一段 lambda 表达式，来开始创建 bean：createBean
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
@@ -266,12 +269,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
-					// ★★★ 此时标志着 bean 的生命周期已经走完
+					// ⭐️ 此时标志着 bean 的生命周期已经走完
 					// 从 this.singletonsCurrentlyInCreation.remove(beanName) 删除正在创建的 beanName
 					afterSingletonCreation(beanName);
 				}
+
 				if (newSingleton) {
-					// ★★★ 得到了一个完成的 bean，加入到一级缓存中
+					// ⭐️ 得到了一个完整的 bean，加入到一级缓存中（单例池）
 					// 清除二级缓存，三级缓存
 					addSingleton(beanName, singletonObject);
 				}
@@ -537,6 +541,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 			disposableBeanNames = StringUtils.toStringArray(this.disposableBeans.keySet());
 		}
 		for (int i = disposableBeanNames.length - 1; i >= 0; i--) {
+			// ⭐️ 清空所有 disposableBean，并执行 DisposableBeanAdapter 的 destroy 方法
 			destroySingleton(disposableBeanNames[i]);
 		}
 
@@ -544,6 +549,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		this.dependentBeanMap.clear();
 		this.dependenciesForBeanMap.clear();
 
+		// 清空单例池
 		clearSingletonCache();
 	}
 
@@ -576,6 +582,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		synchronized (this.disposableBeans) {
 			disposableBean = (DisposableBean) this.disposableBeans.remove(beanName);
 		}
+
+		// ⭐️ 执行 DisposableBeanAdapter 的 destroy 方法
 		destroyBean(beanName, disposableBean);
 	}
 
@@ -587,9 +595,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	protected void destroyBean(String beanName, @Nullable DisposableBean bean) {
 		// Trigger destruction of dependent beans first...
+		// ⭐️ 查找 bean 的依赖关系
+		// 这段逻辑的意思就是：先把自己所依赖的 bean 销毁，然后自己在销毁
 		Set<String> dependencies;
 		synchronized (this.dependentBeanMap) {
 			// Within full synchronization in order to guarantee a disconnected Set
+			// 返回某个 bean 被依赖的关系
 			dependencies = this.dependentBeanMap.remove(beanName);
 		}
 		if (dependencies != null) {
@@ -597,6 +608,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				logger.trace("Retrieved dependent beans for bean '" + beanName + "': " + dependencies);
 			}
 			for (String dependentBeanName : dependencies) {
+				// 将所有被依赖的 bean 进行销毁，是一个递归调用，一样会执行 bean.destroy();
 				destroySingleton(dependentBeanName);
 			}
 		}
@@ -604,6 +616,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		// Actually destroy the bean now...
 		if (bean != null) {
 			try {
+				// ⭐️ 执行 DisposableBeanAdapter 的 destroy 方法
 				bean.destroy();
 			}
 			catch (Throwable ex) {

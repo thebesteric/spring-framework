@@ -235,7 +235,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + registry);
 		}
 		this.registriesPostProcessed.add(registryId);
-		// ★★★ 开始解析配置类
+		// ⭐️ 开始解析配置类
 		processConfigBeanDefinitions(registry);
 	}
 
@@ -286,7 +286,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			// ★★★ 判断当前配置类是不是一个完全的配置类，还是一个非完全的配置累
+			// ⭐️ 判断当前配置类是不是一个完全的配置类，还是一个非完全的配置累
 			// 含有 @Configuration 就是完全的配置类 -> FULL
 			// 不含 @Configuration，含有 @Component，@ComponentScan，@Import，@ImportResource 是一个非完全的配置类 -> LITE
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
@@ -343,7 +343,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		do {
 			StartupStep processConfig = this.applicationStartup.start("spring.context.config-classes.parse");
 
-			// ★★★ 真正开始解析配置类
+			// ⭐️ 真正开始解析配置类
 			parser.parse(candidates);
 			parser.validate();
 
@@ -359,7 +359,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
 
-			// ★★★ 此处会把 @Bean 方法和 @Import 注册到 beanDefinitionMap 中
+			// ⭐️ 此处会把 @Bean 方法和 @Import 注册到 beanDefinitionMap 中
 			// 所以这里如果 @Bean 与 @Component 同名的话，@Bean 会覆盖 @Component 注册的 beanDefinition
 			this.reader.loadBeanDefinitions(configClasses);
 

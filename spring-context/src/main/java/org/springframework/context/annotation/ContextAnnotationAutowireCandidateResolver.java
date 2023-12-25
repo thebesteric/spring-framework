@@ -46,17 +46,20 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 	@Override
 	@Nullable
 	public Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, @Nullable String beanName) {
-		// isLazy(descriptor) 检查是否有代理对象
+		// isLazy(descriptor) 检查属性或方法参数是否有 @Lazy 注解
+		// 如果有：则构建该属性或方法参数的代理对象，并返回
 		return (isLazy(descriptor) ? buildLazyResolutionProxy(descriptor, beanName) : null);
 	}
 
 	protected boolean isLazy(DependencyDescriptor descriptor) {
+		// 属性上是否有 @lazy 注解
 		for (Annotation ann : descriptor.getAnnotations()) {
 			Lazy lazy = AnnotationUtils.getAnnotation(ann, Lazy.class);
 			if (lazy != null && lazy.value()) {
 				return true;
 			}
 		}
+		// 方法参数中是否有 @Lazy 注解
 		MethodParameter methodParam = descriptor.getMethodParameter();
 		if (methodParam != null) {
 			Method method = methodParam.getMethod();
@@ -85,9 +88,12 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 			public boolean isStatic() {
 				return false;
 			}
+
+			// ⭐️ 当使用代理对象（@Lazy 注解的对象）时，会调用 getTarget 的方法
 			@Override
 			public Object getTarget() {
 				Set<String> autowiredBeanNames = (beanName != null ? new LinkedHashSet<>(1) : null);
+				// ⭐️ 当调用代理对象的某个方法的时候，才开始真正的解析这个对象，然后在调用这个对象的方法
 				Object target = dlbf.doResolveDependency(descriptor, beanName, autowiredBeanNames, null);
 				if (target == null) {
 					Class<?> type = getTargetClass();
@@ -123,6 +129,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 		if (dependencyType.isInterface()) {
 			pf.addInterface(dependencyType);
 		}
+		// ⭐️ 产生一个代理对象
 		return pf.getProxy(dlbf.getBeanClassLoader());
 	}
 

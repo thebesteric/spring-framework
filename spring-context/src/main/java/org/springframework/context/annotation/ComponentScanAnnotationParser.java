@@ -132,7 +132,7 @@ class ComponentScanAnnotationParser {
 			}
 		});
 
-		// ★★★ 真正开始解析
+		// ⭐️ 真正开始解析
 		return scanner.doScan(StringUtils.toStringArray(basePackages));
 	}
 

@@ -182,8 +182,8 @@ public abstract class ClassUtils {
 		// 没有设置当前线程的类加载器
 		if (cl == null) {
 			// No thread context class loader -> use class loader of this class.
-			// 获取 ClassUtils.class 的类加载起，通常是 AppClassLoader
-			// 说明：有一种可能我们将 ClassUtils.class 所在的 jar 包，放到了 jre/lib 下，那么就会是 bootstrapClassLoader，所以这里会返回空
+			// 获取 ClassUtils.class 的类加载器，通常是 AppClassLoader
+			// 说明：有一种可能我们将 ClassUtils.class 所在的 jar 包，放到了 jre/lib 下，那么就会是 BootstrapClassLoader，所以这里会返回空
 			cl = ClassUtils.class.getClassLoader();
 			if (cl == null) {
 				// getClassLoader() returning null indicates the bootstrap ClassLoader

@@ -16,16 +16,16 @@
 
 package org.springframework.expression.common;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.ParseException;
 import org.springframework.expression.ParserContext;
 import org.springframework.lang.Nullable;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 
 /**
  * An expression parser that understands templates. It can be subclassed by expression
@@ -88,7 +88,9 @@ public abstract class TemplateAwareExpressionParser implements ExpressionParser 
 	 */
 	private Expression[] parseExpressions(String expressionString, ParserContext context) throws ParseException {
 		List<Expression> expressions = new ArrayList<>();
+		// prefix = "#{"
 		String prefix = context.getExpressionPrefix();
+		// suffix = "}"
 		String suffix = context.getExpressionSuffix();
 		int startIdx = 0;
 

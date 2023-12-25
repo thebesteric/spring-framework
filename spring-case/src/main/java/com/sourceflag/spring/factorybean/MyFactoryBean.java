@@ -9,7 +9,7 @@ public class MyFactoryBean implements SmartFactoryBean<UserService> {
 	@Override
 	public boolean isEagerInit() {
 		// 是否要提前创建
-		return false;
+		return true;
 	}
 
 	@Override

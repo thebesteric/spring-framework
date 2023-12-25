@@ -309,8 +309,8 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
 		else {
-			// ★★★ 扫描候选 Component
-			// 此时返回的 BeanDefinition 中，只有 beanClass 和 metadata 有值
+			// ⭐️ 扫描候选 Component
+			// 此时返回的 BeanDefinition 中，只有 beanClass、resource 和 source 有值
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -373,7 +373,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		try {
 			Set<String> types = new HashSet<>();
 			for (TypeFilter filter : this.includeFilters) {
-				// stereotype 为 @Component 注解
+				// stereotype 为 @Component 注解的名字
 				String stereotype = extractStereotype(filter);
 				if (stereotype == null) {
 					throw new IllegalArgumentException("Failed to extract stereotype from " + filter);
@@ -412,16 +412,19 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		return candidates;
 	}
 
+	// 扫描候选的 bean
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
-			// 将 com.sourceflag.MyConfig 替换成 classpath*:com/sourceflag/MyConfig/**/*.class
+			// 将 com.sourceflag.spring 替换成 classpath*:com/sourceflag/spring/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
 			// 扫描指定包路径下的所有 class 文件包装成 Resource
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
+
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
+
 			for (Resource resource : resources) {
 				if (traceEnabled) {
 					logger.trace("Scanning " + resource);
@@ -508,7 +511,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		// includeFilters 会默认包含一个含有 @Component 注解的过滤器
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
-				// 是否有  @Conditional 条件注解
+				// 是否有 @Conditional 条件注解
 				return isConditionMatch(metadataReader);
 			}
 		}
@@ -540,9 +543,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
 		// 不是抽象类，如果是抽象类那么抽象类上必须有 @Lookup 注解
-		// metadata.isIndependent()：是否是一个顶级类、静态内部类（有效的）
+		// metadata.isIndependent()：是否是一个顶级类、或者是静态内部类（有效的）
 		// metadata.isConcrete()：非接口，非抽象类
-		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么必须要有 @Lookup 注解
+		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么必须要有 @Lookup 注解的方法
 		// @Lookup 可以结合抽象类一起用，保证原型
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));

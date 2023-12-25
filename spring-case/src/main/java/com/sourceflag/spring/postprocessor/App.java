@@ -1,4 +1,4 @@
-package com.sourceflag.spring.beanpostprocessor;
+package com.sourceflag.spring.postprocessor;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
@@ -10,10 +10,12 @@ import org.springframework.context.annotation.ComponentScan;
  * @version v1.0
  * @since 2023-12-14 22:59:43
  */
-@ComponentScan("com.sourceflag.spring.beanpostprocessor")
+@ComponentScan("com.sourceflag.spring.postprocessor")
 public class App {
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(App.class);
-		System.out.println(context.getBean("userService"));
+		UserService userService = context.getBean(UserService.class);
+		userService.test();
+		System.out.println(context.getBean(OrderService.class));
 	}
 }

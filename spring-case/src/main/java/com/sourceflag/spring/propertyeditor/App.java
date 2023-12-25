@@ -44,8 +44,9 @@ public class App {
 		UserService userService = context.getBean("userService", UserService.class);
 		userService.test();
 
-		// 模拟传入 userService 字符串，但是类型时 TestService.class，尝试获取到 UserService
-		System.out.println(context.getBean("userService", TestService.class));
+		// 模拟传入 userService 字符串，但是类型是 TestService.class，尝试获取到 UserService
+		TestService testService = context.getBean("userService", TestService.class);
+		System.out.println(testService);
 	}
 
 	@Configuration

@@ -16,9 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Method;
-import java.util.Properties;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -29,6 +26,9 @@ import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
+
+import java.lang.reflect.Method;
+import java.util.Properties;
 
 /**
  * Basic {@link AutowireCandidateResolver} that performs a full generic type
@@ -62,10 +62,12 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+		// ⭐️ 先调用父类的 isAutowireCandidate，如果匹配成功，在执行下面的匹配
 		if (!super.isAutowireCandidate(bdHolder, descriptor)) {
 			// If explicitly false, do not proceed with any other checks...
 			return false;
 		}
+		// ⭐️ 判断范型
 		return checkGenericTypeMatch(bdHolder, descriptor);
 	}
 

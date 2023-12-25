@@ -16,19 +16,18 @@
 
 package org.springframework.core;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.util.StringValueResolver;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
-import org.springframework.util.StringValueResolver;
 
 /**
  * Simple implementation of the {@link AliasRegistry} interface.
@@ -45,6 +44,10 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	// 这个 aliasMap 的结构为 key = alias，value = beanName
+	// 也就是多个 alias 就会有多个对应关系
+	// alias1 = beanName
+	// alias2 = beanName
 	/** Map from alias to canonical name. */
 	private final Map<String, String> aliasMap = new ConcurrentHashMap<>(16);
 
@@ -211,11 +214,14 @@ public class SimpleAliasRegistry implements AliasRegistry {
 		// Handle aliasing...
 		String resolvedName;
 		do {
+			// 从别名缓存中获取 beanName
+			// 这个 aliasMap 的结构为 key = alias，value = beanName
 			resolvedName = this.aliasMap.get(canonicalName);
 			if (resolvedName != null) {
 				canonicalName = resolvedName;
 			}
 		}
+		// 这里 do while 的情况是：当取到 beanName 时，可能这个 beanName 还是 alias，直到为 null，才是真正的 beanName
 		while (resolvedName != null);
 		return canonicalName;
 	}

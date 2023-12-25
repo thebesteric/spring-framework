@@ -24,9 +24,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class App {
 	public static void main(String[] args) {
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		context.register(AppConfig.class);
-		context.refresh();
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+		// context.registerShutdownHook();
 
 		// context.addApplicationListener(new LoginListener());
 

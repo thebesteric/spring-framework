@@ -78,7 +78,7 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	@Override
 	public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
 		if (definition instanceof AnnotatedBeanDefinition) {
-			// 获取注解上的 beanName
+			// 获取 @Component 注解上的 beanName
 			String beanName = determineBeanNameFromAnnotation((AnnotatedBeanDefinition) definition);
 			if (StringUtils.hasText(beanName)) {
 				// Explicit bean name found.
@@ -86,7 +86,9 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 			}
 		}
 		// Fallback: generate a unique default bean name.
-		// 创建一个默认的名字
+		// 当 @Component 注解上没有设置 value 属性的话，则创建一个默认的名字
+		// 1. 如果类的第一个字母和第二个字母都是大写，直接返回，比如说有一个类是 ABTest，那么他的 beanName 也就是 ABTest
+		// 2. 其他情况返回首字母小写:Test => test
 		return buildDefaultBeanName(definition, registry);
 	}
 
@@ -107,8 +109,7 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 					Set<String> result = amd.getMetaAnnotationTypes(key);
 					return (result.isEmpty() ? Collections.emptySet() : result);
 				});
-				// 判断是否是：org.springframework.stereotype.Component
-				// 或 javax.annotation.ManagedBean，或 javax.inject.Named
+				// 判断是否是：org.springframework.stereotype.Component 或 javax.annotation.ManagedBean，或 javax.inject.Named
 				if (isStereotypeWithNameValue(type, metaTypes, attributes)) {
 					// 在获取其 value 值作为 beanName
 					Object value = attributes.get("value");
@@ -172,9 +173,10 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	protected String buildDefaultBeanName(BeanDefinition definition) {
 		String beanClassName = definition.getBeanClassName();
 		Assert.state(beanClassName != null, "No bean class name set");
+		// com.sourceforge.spring.Test.class => Test
 		String shortClassName = ClassUtils.getShortName(beanClassName);
 		// 如果类的第一个字母和第二个字母都是大写，直接返回，比如说有一个类是 ABTest，那么他的 beanName 也就是 ABTest
-		// 其他情况返回首字母小写
+		// 其他情况返回首字母小写:Test => test
 		return Introspector.decapitalize(shortClassName);
 	}
 

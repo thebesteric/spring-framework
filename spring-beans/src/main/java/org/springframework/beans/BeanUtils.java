@@ -603,6 +603,7 @@ public abstract class BeanUtils {
 			return new MethodParameter(((GenericTypeAwarePropertyDescriptor) pd).getWriteMethodParameter());
 		}
 		else {
+			// 也就是获取 setter 方法
 			Method writeMethod = pd.getWriteMethod();
 			Assert.state(writeMethod != null, "No write method available");
 			// 仅仅只会拿方法到第一个参数
