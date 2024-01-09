@@ -88,13 +88,17 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	@Override
 	protected List<Advisor> findCandidateAdvisors() {
 		// Add all the Spring advisors found according to superclass rules.
-		// ★★★ 得到所有实现了 Advisor 接口类型的 bean，如果没有使用事务，则通常都找不到
+		// ⭐️ 得到所有实现了 Advisor 接口类型的 bean，如果没有使用事务，则通常都找不到
+		// ⌨️ @Component
+		// ⌨️ public class MyAdvisor implements PointcutAdvisor {...}
+		// 这样定义就会找到 MyAdvisor 这个 bean
 		List<Advisor> advisors = super.findCandidateAdvisors();
 
 		// Build Advisors for all AspectJ aspects in the bean factory.
-		// 从所有切面中解析 advice	和 pointCut 包装为 advisor
+		// ⭐️ 从所有 @Aspect 切面中解析 advice 和 pointCut 包装为 advisor
 		if (this.aspectJAdvisorsBuilder != null) {
-			// ★★★ 找到以 @Aspect 的方式定义的 Advisor
+			// ⭐️ 找到以 @Aspect 的方式定义的 Advisor
+			// 其实就是将不同的 advice 封装成 InstantiationModelAwarePointcutAdvisorImpl 对象
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
 		return advisors;

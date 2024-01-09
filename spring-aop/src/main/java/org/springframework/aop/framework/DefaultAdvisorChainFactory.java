@@ -49,7 +49,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 		// This is somewhat tricky... We have to process introductions first,
 		// but we need to preserve order in the ultimate list.
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
-		// 获取所有的 advisor，因为 advice 也会包装为 advisor
+		// ⭐️ 获取所有的 advisor，因为直接添加的 advice 也会包装为 advisor
 		Advisor[] advisors = config.getAdvisors();
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
@@ -59,9 +59,9 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 			if (advisor instanceof PointcutAdvisor) {
 				// Add it conditionally.
 				PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
-				// 先匹配类：获取类型匹配器 ClassFilter 调用 matches 方法
+				// ⭐️ 先匹配类：获取类型匹配器 ClassFilter 调用 matches 方法
 				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
-					// 再匹配方法：获取方法匹配器 MethodMatcher 调用 matches 方法
+					// ⭐️ 再匹配方法：获取方法匹配器 MethodMatcher 调用 matches 方法
 					MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
 					boolean match;
 					if (mm instanceof IntroductionAwareMethodMatcher) {
@@ -71,14 +71,15 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 						match = ((IntroductionAwareMethodMatcher) mm).matches(method, actualClass, hasIntroductions);
 					}
 					else {
-						// 调用 matches 方法
+						// ⭐️ 调用 matches 方法
 						match = mm.matches(method, actualClass);
 					}
 					if (match) {
-						// 将 advisor 封装为 MethodInterceptor
+						// ⭐️ 将匹配的 advisor 封装为 MethodInterceptor
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
-						// 是否是运行时匹配，这个与 matches(Method method, Class<?> targetClass, Object... args); 相关
-						// 即需要看 args 是否符合匹配逻辑
+						// ⭐️ 是否是运行时匹配，如果开启，则需要判断运行时参数是否匹配
+						// 这个与 matches(Method method, Class<?> targetClass, Object... args); 相关
+						// 如果开启运行时，即需要看 args 是否符合匹配
 						if (mm.isRuntime()) {
 							// Creating a new object instance in the getInterceptors() method
 							// isn't a problem as we normally cache created chains.

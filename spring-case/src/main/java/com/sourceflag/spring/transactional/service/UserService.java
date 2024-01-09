@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @since 1.0
  */
 @Component
+// @Transactional
 public class UserService {
 
 	@Autowired

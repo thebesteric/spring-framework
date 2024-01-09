@@ -210,6 +210,7 @@ public class InjectionMetadata {
 				}
 			}
 			else {
+				// 方法的参数，只能是一个
 				Class<?> paramType =
 						(this.pd != null ? this.pd.getPropertyType() : ((Method) this.member).getParameterTypes()[0]);
 				if (!(resourceType.isAssignableFrom(paramType) || paramType.isAssignableFrom(resourceType))) {
@@ -228,6 +229,7 @@ public class InjectionMetadata {
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
+				// ⭐️ 反射调用字段，通过 getResourceToInject 方法，去查找 bean
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
 			else {
@@ -237,6 +239,7 @@ public class InjectionMetadata {
 				try {
 					Method method = (Method) this.member;
 					ReflectionUtils.makeAccessible(method);
+					// 反射调用方法
 					method.invoke(target, getResourceToInject(target, requestingBeanName));
 				}
 				catch (InvocationTargetException ex) {

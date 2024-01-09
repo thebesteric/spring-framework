@@ -69,13 +69,13 @@ public class BeanFactoryAdvisorRetrievalHelper {
 		if (advisorNames == null) {
 			// Do not initialize FactoryBeans here: We need to leave all regular beans
 			// uninitialized to let the auto-proxy creator apply to them!
-			// 从容器中找到实现了 Advisor 接口的实现类（通常找不到，因为我们很少使用实现接口的方式来实现 AOP）
+			// ⭐️ 从容器中找到实现了 Advisor 接口的实现类（通常找不到，因为我们很少使用实现接口的方式来实现 AOP）
 			// 而我们事务注解 @EnableTransactionManagement 则导入了一个叫 ProxyTransactionManagementConfiguration 的类
 			// 而这个配置类中配置了:
-			// @Bean(name = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME)
-			// @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
-			// public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(...)
-			// BeanFactoryTransactionAttributeSourceAdvisor 类实现了 Advisor 接口
+			// ⌨️ @Bean(name = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME)
+			// ⌨️ @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+			// ⌨️ public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(...)
+			// 而 BeanFactoryTransactionAttributeSourceAdvisor 类实现了 Advisor 接口
 			advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 					this.beanFactory, Advisor.class, true, false);
 			this.cachedAdvisorBeanNames = advisorNames;
@@ -88,6 +88,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 
 		List<Advisor> advisors = new ArrayList<>();
 		for (String name : advisorNames) {
+			// isEligibleBean 是一个扩展方法，默认返回 true
 			if (isEligibleBean(name)) {
 				if (this.beanFactory.isCurrentlyInCreation(name)) {
 					if (logger.isTraceEnabled()) {
@@ -96,8 +97,8 @@ public class BeanFactoryAdvisorRetrievalHelper {
 				}
 				else {
 					try {
-						// ★★★ 找到所有实现了 Advisor.class 接口类型的 bean
-						// 事务中的 BeanFactoryTransactionAttributeSourceAdvisor 就实现了 Advisor.class 接口
+						// ⭐️ 找到并添加所有实现了 Advisor.class 接口类型的 bean
+						// 如：事务中的 BeanFactoryTransactionAttributeSourceAdvisor 就实现了 Advisor.class 接口
 						advisors.add(this.beanFactory.getBean(name, Advisor.class));
 					}
 					catch (BeanCreationException ex) {

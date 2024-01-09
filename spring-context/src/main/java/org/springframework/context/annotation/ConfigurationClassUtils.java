@@ -83,7 +83,7 @@ abstract class ConfigurationClassUtils {
 	public static boolean checkConfigurationClassCandidate(
 			BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
 
-		// @Bean 定义的方法，是没有 beanClassName 属性的
+		// ⭐️ @Bean 定义的方法，是没有 beanClassName 属性的
 		// 也就是说 @Bean 定义的配置类是不起作用的
 		String className = beanDef.getBeanClassName();
 		if (className == null || beanDef.getFactoryMethodName() != null) {
@@ -94,7 +94,7 @@ abstract class ConfigurationClassUtils {
 		AnnotationMetadata metadata;
 
 		// 如果是 AnnotatedBeanDefinition 则直接获取 metadata
-		// 其中 AppConfig.class 是一个 AnnotatedGenericBeanDefinition 实现了 AnnotatedBeanDefinition
+		// ⭐️ 其中 AppConfig.class 是一个 AnnotatedGenericBeanDefinition 实现了 AnnotatedBeanDefinition
 		// 所以 AppConfig 就会在这里解析到元数据
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
@@ -129,18 +129,21 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
-		// 判断是不是一个完全的配置类，也就是是否有 @Configuration 注解标识，然后将属性封装为一个 map
+		// ⭐️ 判断是不是一个完全的配置类，也就是是否有 @Configuration 注解标识，然后将属性封装为一个 map
 		// 完全配置类会被 CGLIB 动态代理
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 
-		// 如果有 @Configuration 注解，并且 proxyBeanMethods=true
+		// ⭐️ 如果有 @Configuration 注解，并且 proxyBeanMethods=true
 		// 则是 full 配置类
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+			// 给 configurationClass 属性赋值为 full，后面在增强配置类的时候会使用到这个属性
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
-		// 如果没有 @Configuration，但是有：如 @Component，@ComponentScan，@Import，@ImportResource 或者含有 @Bean 注解的方法
+		// ⭐️ 如果没有 @Configuration 注解，并且 proxyBeanMethods=false
+		// ⭐️ 但是有：如 @Component，@ComponentScan，@Import，@ImportResource 或者含有 @Bean 注解的方法
 		// 则是 lite 配置类
 		else if (config != null || isConfigurationCandidate(metadata)) {
+			// 给 configurationClass 属性赋值为 lite，后面在增强配置类的时候会使用到这个属性
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {
@@ -165,12 +168,13 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
+		// 如果是接口，直接发返回 false
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
-		// 含有：Component.class、ComponentScan.class、Import.class、ImportResource.class
+		// ⭐️ 含有：Component.class、ComponentScan.class、Import.class、ImportResource.class
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -179,7 +183,7 @@ abstract class ConfigurationClassUtils {
 
 		// Finally, let's look for @Bean methods...
 		try {
-			// 方法内部有 @Bean 注解的方法，也是一个配置类
+			// ⭐️ 兜底：方法内部有 @Bean 注解的方法，也是一个配置类
 			return metadata.hasAnnotatedMethods(Bean.class.getName());
 		}
 		catch (Throwable ex) {

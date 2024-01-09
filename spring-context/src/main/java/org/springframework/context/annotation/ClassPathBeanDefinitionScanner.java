@@ -160,7 +160,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		this.registry = registry;
 
 		if (useDefaultFilters) {
-			// 注册默认过滤器
+			// ⭐️ 注册默认过滤器
 			registerDefaultFilters();
 		}
 		// 设置环境对象
@@ -298,7 +298,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 
-				// 检查 beanDefinition 是否已经存在
+				// ⭐️ 检查 beanDefinition 是否已经存在
 				// 如果存在相同名字的 BD，则抛出异常， 这里也会检查是否是多次扫描的逻辑
 				if (checkCandidate(beanName, candidate)) {
 					// 将 BD 封装成一个 BeanDefinitionHolder
@@ -388,9 +388,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * new definition to be skipped in favor of the existing definition
 	 */
 	protected boolean isCompatible(BeanDefinition newDefinition, BeanDefinition existingDefinition) {
-		// 条件1. 如果不是 ScannedGenericBeanDefinition 返回：false，表示不是通过 scan 扫描出来的，可能是人为注册的
-		// 条件2. 第二次扫描和第一次扫描的 source 都相同，表示是同一个类，返回 true
-		// 条件3. 新的 BD 和 已经存在的 BD 相同，返回 true
+		// 🏷️ 条件1. 如果不是 ScannedGenericBeanDefinition 返回：false，表示不是通过 scan 扫描出来的，可能是人为注册的
+		// 🏷️ 条件2. 第二次扫描和第一次扫描的 source 都相同，表示是同一个类，返回 true
+		// 🏷️ 条件3. 新的 BD 和 已经存在的 BD 相同，返回 true
 		return (!(existingDefinition instanceof ScannedGenericBeanDefinition) ||  // explicitly registered overriding bean
 				(newDefinition.getSource() != null && newDefinition.getSource().equals(existingDefinition.getSource())) ||  // scanned same file twice
 				newDefinition.equals(existingDefinition));  // scanned equivalent class twice

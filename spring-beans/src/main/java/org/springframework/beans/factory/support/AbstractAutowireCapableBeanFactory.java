@@ -140,9 +140,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		ignoreDependencyInterface(BeanFactoryAware.class);
 		ignoreDependencyInterface(BeanClassLoaderAware.class);
 		if (IN_NATIVE_IMAGE) {
+			// graalvm 使用
 			this.instantiationStrategy = new SimpleInstantiationStrategy();
 		}
 		else {
+			// 处理 @Lookup 注解的方法
 			this.instantiationStrategy = new CglibSubclassingInstantiationStrategy();
 		}
 	}
@@ -402,8 +404,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object result = existingBean;
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
-			// AOP：@EnableAspectJAutoProxy 为我们容器导入了 AnnotationAwareAspectJAutoProxyCreator 后置处理器
-			// 事务：@EnableTransactionManagement 为我们容器导入了 AspectJTransactionManagementConfiguration 后置处理器
+			// ⭐️ AOP：@EnableAspectJAutoProxy 为我们容器导入了 AnnotationAwareAspectJAutoProxyCreator 后置处理器
+			// ⭐️ 事务：@EnableTransactionManagement 为我们容器导入了 AspectJTransactionManagementConfiguration 后置处理器
 			// 都是实现了 BeanPostProcessor 接口：InstantiationAwareBeanPostProcessor
 			// 并通过 postProcessAfterInitialization 方法来生成我们的代理类
 			Object current = processor.postProcessAfterInitialization(result, beanName);
@@ -508,6 +510,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// ⭐️ 【2、实例化】关键代码：开始创建 bean
 			// 包括【推断构造方法】，【属性填充】，【初始化】等
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+
 			if (logger.isTraceEnabled()) {
 				logger.trace("Finished creating instance of bean '" + beanName + "'");
 			}
@@ -596,7 +599,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// ⭐️ 关键代码：【第四次调用后置处理器】，为工厂服务，并判断是否需要 AOP
+			// ⭐️ 关键代码：【第四次调用后置处理器】，为工厂服务，并判断是否需要 AOP，如果不需要 AOP 就返回原始对象 bean
 			// 提前把这个 bean 的 ObjectFactory 放入三级缓存 singletonFactories 中，并从二级缓存删除 bean
 			// 这也是循环依赖的重点，提前暴露一个对象工厂，这个对象工厂可以生成完整的 bean 对象
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
@@ -631,13 +634,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// ⭐️ 是否有循环依赖
 		if (earlySingletonExposure) {
+			// 这里的 allowEarlyReference 为 false，表示只允许从一级缓存和二级缓存中获取 bean
 			Object earlySingletonReference = getSingleton(beanName, false);
 			if (earlySingletonReference != null) {
 				if (exposedObject == bean) {
-					// 对循环依赖暴露的 bean 进行替换
+					// ⭐️ 对循环依赖暴露的 bean 进行替换
 					exposedObject = earlySingletonReference;
 				}
+				// 如果走到这里，则表示 exposedObject 已经被改变了，如：开启了 @EnableAsync，当前的 bean 又有 @Async 注解的方法
+				// 则：initializeBean 返回的就是 AsyncAnnotationBeanPostProcessor 返回的代理对象了
+				// 这里可以使用 @Lazy 来解决
 				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
+					// beanName 被哪些 bean 依赖了，发现 beanName 所对应的 bean 发生了改变，那么就会报错
 					String[] dependentBeans = getDependentBeans(beanName);
 					Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
 					for (String dependentBean : dependentBeans) {
@@ -1205,23 +1213,26 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// ⭐️ @Bean 注解的方法就是在这里所实例化的
+		// @Bean 解析成 BD 的时候，一定会有 FactoryMethodName 的对应的值，值就是 beanName
 		// 如果提供了 工厂方法 来实例化，那么直接就使用 工厂方法 来实例化，而不再进行后续推断
 		// 如: AppConfig 下可以配置 @Bean，那么有两种情况
-		// 情况一：定义的 @Bean 方法，不是 static 的方法
+		// 🏷️ 情况一：定义的 @Bean 方法，不是 static 的方法
 		// beanClass = null
 		// FactoryBeanName = appConfig
 		// FactoryMethodName = bean 的方法名
-		// 情况二：定义的 @Bean 方法，是 static 的方法
+		// 🏷️ 情况二：定义的 @Bean 方法，是 static 的方法
 		// beanClass = AppConfig.class
 		// FactoryBeanName = null
 		// FactoryMethodName = bean 的方法名
 		if (mbd.getFactoryMethodName() != null) {
+			// ⭐️ 处理 @Bean 定义的方法
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
 
 		// Shortcut when re-creating the same bean...
 		// 重新创建 bean 的快速方式（针对 prototype）
 		// resolved 表示创建对象的构造方法没有被解析过
+		// 一个原型 BeanDefinition，会多次来创建 bean，那么就可以把这个 BD 所需要的构造方法缓存起来，避免每次都要进行构造方法推断
 		boolean resolved = false;
 		boolean autowireNecessary = false;
 		// 如果 getBean 的时候没有指定参数
@@ -1233,13 +1244,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				// 该 BD 是否已经决定了要使用的构造方法或工厂方法
 				if (mbd.resolvedConstructorOrFactoryMethod != null) {
 					resolved = true;
-					// autowireNecessary 表示有么有必要进行参数注入
+					// autowireNecessary 表示是否有必要进行参数注入
 					// 比如：当前 BD 用的是无参的构造方法，那么 autowireNecessary 就等于 false
 					autowireNecessary = mbd.constructorArgumentsResolved;
 				}
 			}
 		}
-		// singleton 的情况下，这里永远不会成立，因为 单例只会执行一遍
+		// ⭐️ singleton 的情况下，这里永远不会成立，因为 单例只会执行一遍
 		// 只有 prototype 才会成立
 		if (resolved) {
 			// 有参数的构造方法
@@ -1289,14 +1300,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// ⭐️ 找出候选构造方法
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 
+		// 🏷️ 如果推断出 ctors != null：如果解析出来构造方法，就需要给构造方法的参数赋值，使用自动装配
+		// 🏷️ 如果指定了 AutowireMode = AUTOWIRE_CONSTRUCTOR：如果 BD 设置了构造方法注入模式，则也需要给构造方法赋值，使用自动装配
+		// 🏷️ 如果是通过 BD 明确给了构造方法的参数，即设置了 constructorArgumentValues，则也需要给构造方法注入值，值是手动指定的
+		// 🏷️ 如果调用 getBean 的时候，指定了参数，则也需要给构造方法注入值，值是手动指定的
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
-			// ★★★ 如果 ctors != null 或 使用自动装配，则再次进行推断，并确定使用哪一个构造方法，并注入
+			// ⭐️ 使用自动装配，则再次进行推断，并确定使用哪一个构造方法，并注入
 			return autowireConstructor(beanName, mbd, ctors, args);
 		}
 
 		// Preferred constructors for default construction?
-		// 走到这一步的时候，Spring 并没有推断出来构造方法，那么就先看有没有
+		// 与 kotlin 相关：走到这一步的时候，Spring 并没有推断出来构造方法，那么就先看有没有 PreferredConstructors
 		ctors = mbd.getPreferredConstructors();
 		if (ctors != null) {
 			return autowireConstructor(beanName, mbd, ctors, null);
@@ -1374,7 +1389,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		if (beanClass != null && hasInstantiationAwareBeanPostProcessors()) {
 			for (SmartInstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().smartInstantiationAware) {
-				// 调用 AutowiredAnnotationBeanPostProcessor.determineCandidateConstructors 推断构造方法
+				// ⭐️ 调用 AutowiredAnnotationBeanPostProcessor.determineCandidateConstructors 推断构造方法
 				Constructor<?>[] ctors = bp.determineCandidateConstructors(beanClass, beanName);
 				if (ctors != null) {
 					return ctors;
@@ -1399,7 +1414,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						getAccessControlContext());
 			}
 			else {
-				// getInstantiationStrategy() 的实现为 CglibSubclassingInstantiationStrategy
+				// ⭐️ getInstantiationStrategy() 的实现为 CglibSubclassingInstantiationStrategy
 				beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, this);
 			}
 			BeanWrapper bw = new BeanWrapperImpl(beanInstance);
@@ -1485,11 +1500,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
 		// 已经标记为过时的方法
-		// ⌨️ <bean id="userService" class="xxx.UserService" autowire="byType" />
+		// 🖨️ <bean id="userService" class="xxx.UserService" autowire="byType" />
 		// 或
-		// ⌨️ @Bean(autowire = Autowire.BY_TYPE) 这种方式，模式 autowire 默认值为 Autowire.NO
+		// 🖨️ @Bean(autowire = Autowire.BY_TYPE) 这种方式，模式 autowire 默认值为 Autowire.NO
 		// 只有 Autowire.BY_TYPE 或 Autowire.BY_NAME 才支持 setter 方法的注入
-		// ⌨️ public void setOrderService(OrderService orderService) {...}
+		// 🖨️ public void setOrderService(OrderService orderService) {...}
 		// Autowire.BY_TYPE：使用 setter 方法的参数类型
 		// Autowire.BY_NAME：使用 setter 方法去掉 set 前缀后的名称
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
@@ -1560,7 +1575,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	protected void autowireByName(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
-		// 获取所有含有 setter 方法的属性
+		// ⭐️ 获取所有含有 setter 方法的属性
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			// 先检查容器中是否含有对应 propertyName 的 bean 对象，或者 BD
@@ -1603,7 +1618,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
-		// 找到所有 setter 方法
+		// ⭐️ 找到所有符合条件的 setter 方法
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			try {
@@ -1654,7 +1669,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 获取属性描述器，属性必须含有 setter 或 getter 方法
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
 
-		// 什么样的属性可以自动注入？
+		// ⭐️ 什么样的属性可以自动注入？
 		// 1. 该属性具有对应的 setter 方法
 		// 2. 没有在 ignoreDependencyTypes 中
 		// 3. 如果该属性对应的 setter 方法是实现的某个接口中所定义的，那个该接口没有在 ignoredDependencyInterfaces 中
@@ -1924,7 +1939,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// ⭐ 初始化后：AOP，事务在此处执行
 		if (mbd == null || !mbd.isSynthetic()) {
-			// ★ 调用 beanPostProcess 初始化后 postProcessAfterInitialization 方法
+			// 调用 beanPostProcess 初始化后 postProcessAfterInitialization 方法
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

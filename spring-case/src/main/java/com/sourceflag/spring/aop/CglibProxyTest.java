@@ -46,10 +46,11 @@ public class CglibProxyTest {
 		enhancer.setCallbackFilter(new CallbackFilter() {
 			@Override
 			public int accept(Method method) {
+				// 返回的数字，就是 Callback[] 数组的下标
 				if (method.getName().equals("other")) {
-					return 1;
+					return 1; // 执行第二个代理逻辑
 				}
-				return 0;
+				return 0; // 执行第一个代理逻辑
 			}
 		});
 

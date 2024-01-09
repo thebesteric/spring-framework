@@ -4,6 +4,7 @@ import com.sourceflag.spring.aop.service.UserService;
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.AfterReturningAdvice;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.PointcutAdvisor;
 import org.springframework.aop.ThrowsAdvice;
@@ -25,13 +26,15 @@ import java.lang.reflect.Method;
 public class SpringProxyTest {
 
 	public static void main(String[] args) {
+		UserService target = new UserService();
+
 		ProxyFactory proxyFactory = new ProxyFactory();
 
 		// proxyFactory.setOptimize(true); // CGLIB 动态代理
 		// proxyFactory.setProxyTargetClass(true); // CGLIB 动态代理
 
 		// 目标对象
-		proxyFactory.setTarget(new UserService()); // CGLIB 动态代理
+		proxyFactory.setTarget(target); // CGLIB 动态代理
 		// proxyFactory.addInterface(UserServiceInterface.class); // 如果设置了接口，就会使用 JDK 动态代理
 
 		// 代理逻辑：方法执行之前
@@ -43,12 +46,12 @@ public class SpringProxyTest {
 		// });
 
 		// 代理逻辑：方法执行之后
-		// proxyFactory.addAdvice(new AfterReturningAdvice() {
-		// 	@Override
-		// 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
-		// 		System.out.println(method.getName() + " 方法返回后的逻辑...");
-		// 	}
-		// });
+		proxyFactory.addAdvice(new AfterReturningAdvice() {
+			@Override
+			public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
+				System.out.println(method.getName() + " 方法返回后的逻辑...");
+			}
+		});
 
 		// 代理逻辑：发生异常
 		// proxyFactory.addAdvice(new MyThrowsAdvice());
@@ -103,14 +106,20 @@ public class SpringProxyTest {
 		// UserServiceInterface proxy = (UserServiceInterface) proxyFactory.getProxy();
 
 		UserService proxy = (UserService) proxyFactory.getProxy();
-		proxy.other();
+		// proxy.other();
 		proxy.test();
 	}
 
 	// 异常 advice 必须是独立的 public 类，不能是匿名内部类
 	public static class MyThrowsAdvice implements ThrowsAdvice {
+		// 第四个参数：Exception 可以指定要拦截什么类型的异常
+		// 如果是 Exception 则表示拦截所有异常
 		public void afterThrowing(Method method, Object[] args, Object target, Exception ex) {
-			System.out.println("发生了异常1..." + ex.getMessage());
+			System.out.println("发生了异常..." + ex.getMessage());
+		}
+
+		public void afterThrowing(Method method, Object[] args, Object target, NullPointerException ex) {
+			System.out.println("发生了空指针异常..." + ex.getMessage());
 		}
 	}
 }

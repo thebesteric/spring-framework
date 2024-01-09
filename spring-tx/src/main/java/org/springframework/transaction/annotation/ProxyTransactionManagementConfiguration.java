@@ -50,7 +50,7 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 		BeanFactoryTransactionAttributeSourceAdvisor advisor = new BeanFactoryTransactionAttributeSourceAdvisor();
 		// 设置切点的属性解析器
 		advisor.setTransactionAttributeSource(transactionAttributeSource);
-		// ★★★ 设置代理逻辑，是一个 TransactionInterceptor 对象，会执行其 invoke 方法
+		// ⭐️ 设置代理逻辑，是一个 TransactionInterceptor 对象，会执行其 invoke 方法
 		// 来处理事务，开启事务，关闭事务，回滚，提交等
 		advisor.setAdvice(transactionInterceptor);
 

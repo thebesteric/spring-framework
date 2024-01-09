@@ -114,7 +114,7 @@ class ConfigurationClassBeanDefinitionReader {
 	public void loadBeanDefinitions(Set<ConfigurationClass> configurationModel) {
 		TrackedConditionEvaluator trackedConditionEvaluator = new TrackedConditionEvaluator();
 		for (ConfigurationClass configClass : configurationModel) {
-			// 从配置类读取 BD 并完成注册
+			// 将配置类都解析成 BeanDefinition
 			loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
 		}
 	}
@@ -134,22 +134,23 @@ class ConfigurationClassBeanDefinitionReader {
 			this.importRegistry.removeImportingClass(configClass.getMetadata().getClassName());
 			return;
 		}
-		// ★★★ 是否含有 @Import 注解
+		// ⭐️处理 @Import 注解
 		if (configClass.isImported()) {
-			// 通过 @Import 导入的 bean 生成 BD
+			// 通过 @Import 导入的 bean 生成 BD（@Import 不光自己是一个配置类，而且自己也是一个 bean）
 			// 注意一下：通过 @Import 导入的 bean，其名称默认是类的全限定名
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
-		// ★★★ 是否有 @Bean 方法
+		// ⭐️ 处理 @Bean 方法（这里就用到了解析配置类时，添加到 beanMethods 的属性）
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			// 通过 bean 方法生成 BD
+			// 如果没有指定 autowiredMode 的话，默认 @Bean 的 autowiredMode 会设置成 AUTOWIRE_CONSTRUCTOR
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
-		// 处理 @ImportedResource 导入的 spring.xml 文件
+		// ⭐️ 处理 @ImportedResource 导入的 spring.xml 文件（这里就用到了解析配置类时，添加到 importedResources 的属性）
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
 
-		// 处理	@Import 导入的 ImportBeanDefinitionRegistrar 接口生成的 bean
+		// ⭐️ 处理	@Import 导入的 ImportBeanDefinitionRegistrar 接口生成的 bean（这里就用到了解析配置类时，添加到 importBeanDefinitionRegistrars 的属性）
 		// 执行 ImportBeanDefinitionRegistrar 的 registerBeanDefinitions 方法
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
@@ -210,15 +211,17 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		// Has this effectively been overridden before (e.g. via XML)?
+		// ⭐️ 是否要重写已经存在的 BD
 		// 1、如果有相同名字的 @Bean 注解的方法，直接 return 不会再创建了
 		// 2、如果 @Component 生成的 BD 和 @Bean 生成的 BD 相同，则会返回 false，后续的代码会进行覆盖
 		if (isOverriddenByExistingDefinition(beanMethod, beanName)) {
-			// bean 的名字和 AppConfig 的名字是相同的，则报错
+			// ⭐️ bean 的名字和 AppConfig 的名字是相同的，则报错
 			if (beanName.equals(beanMethod.getConfigurationClass().getBeanName())) {
 				throw new BeanDefinitionStoreException(beanMethod.getConfigurationClass().getResource().getDescription(),
 						beanName, "Bean name derived from @Bean method '" + beanMethod.getMetadata().getMethodName() +
 						"' clashes with bean name for containing configuration class; please make those names unique!");
 			}
+			// 存在相同名字的 @Bean 定义的方法，直接返回
 			return;
 		}
 
@@ -295,7 +298,7 @@ class ConfigurationClassBeanDefinitionReader {
 			logger.trace(String.format("Registering bean definition for @Bean method %s.%s()",
 					configClass.getMetadata().getClassName(), beanName));
 		}
-		// 注册到 beanDefinitionMap 中
+		// ⭐️ 注册到 beanDefinitionMap 中，同时会判断名称重复的情况
 		this.registry.registerBeanDefinition(beanName, beanDefToRegister);
 	}
 
@@ -303,18 +306,23 @@ class ConfigurationClassBeanDefinitionReader {
 		if (!this.registry.containsBeanDefinition(beanName)) {
 			return false;
 		}
+		// ⭐️ 当前得到 beanName 在 beanFactory 中是否已经存在
 		BeanDefinition existingBeanDef = this.registry.getBeanDefinition(beanName);
 
 		// Is the existing bean definition one that was created from a configuration class?
 		// -> allow the current bean method to override, since both are at second-pass level.
 		// However, if the bean method is an overloaded case on the same configuration class,
 		// preserve the existing bean definition.
-		// ConfigurationClassBeanDefinition 是通过 @Bean 生成的类型
-		// ScannedGenericBeanDefinition 是通过扫描生成的类型
+		// ⭐️ 判断存在的 beanDefinition 的类型
+		// 🏷️ @Bean 是通过配置类生成的类型：ConfigurationClassBeanDefinition
+		// 🏷️ 通过 @Component 扫描生成的类型：ScannedGenericBeanDefinition
+		// ⭐️ 已存在的 BD 是通过 @Bean 生成的类型
 		if (existingBeanDef instanceof ConfigurationClassBeanDefinition) {
 			ConfigurationClassBeanDefinition ccbd = (ConfigurationClassBeanDefinition) existingBeanDef;
 			if (ccbd.getMetadata().getClassName().equals(
 					beanMethod.getConfigurationClass().getMetadata().getClassName())) {
+				// ⭐️ 如果 @Bean 对应的 beanName 已经存在 BD，那么就把 isFactoryMethodUnique 设置为 false，表示不是唯一的
+				// ⭐️ 等后续根据 BD 创建 bean 的时候，就知道不止一个同名方法了，就要开始推断了
 				if (ccbd.getFactoryMethodMetadata().getMethodName().equals(ccbd.getFactoryMethodName())) {
 					ccbd.setNonUniqueFactoryMethodName(ccbd.getFactoryMethodMetadata().getMethodName());
 				}
@@ -327,8 +335,9 @@ class ConfigurationClassBeanDefinitionReader {
 
 		// A bean definition resulting from a component scan can be silently overridden
 		// by an @Bean method, as of 4.2...
-		// 已存在的 BD 是通过扫描获取到的类型，返回 false，后面会使用 @Bean 进行覆盖扫描获得的类型
+		// ⭐️ 已存在的 BD 是通过扫描获取到的类型，返回 false，后面会使用 @Bean 进行覆盖扫描获得的类型
 		if (existingBeanDef instanceof ScannedGenericBeanDefinition) {
+			// 所以 @Bean 定义的 BD 会覆盖 @Component 定义的 BD
 			return false;
 		}
 

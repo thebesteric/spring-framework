@@ -15,7 +15,7 @@ import java.util.Map;
  *
  * 增加了一个出口方法：getSingleton(String beanName)
  *
- * 问题：多线程并发访问，会拿到不完整的 bean
+ * 问题：多线程并发访问，会拿到不完整的 bean，如果存在 AOP 的话，那么属性中的还是原始对象
  *
  * @author Eric Joe
  * @version 1.0

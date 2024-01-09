@@ -67,6 +67,7 @@ class ConfigurationClassEnhancer {
 
 	// The callbacks to use. Note that these callbacks must be stateless.
 	private static final Callback[] CALLBACKS = new Callback[] {
+			// ⭐️ 核心代理逻辑
 			new BeanMethodInterceptor(),
 			new BeanFactoryAwareMethodInterceptor(),
 			NoOp.INSTANCE
@@ -99,7 +100,7 @@ class ConfigurationClassEnhancer {
 			}
 			return configClass;
 		}
-		// 创建代理类
+		// ⭐️ 创建代理类。并设置代理逻辑
 		Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
 		if (logger.isTraceEnabled()) {
 			logger.trace(String.format("Successfully enhanced %s; enhanced class name is: %s",
@@ -131,7 +132,7 @@ class ConfigurationClassEnhancer {
 		Class<?> subclass = enhancer.createClass();
 		// Registering callbacks statically (as opposed to thread-local)
 		// is critical for usage in an OSGi environment (SPR-5932)...
-		// CALLBACKS 就是代理逻辑
+		// ⭐️ CALLBACKS 就是代理逻辑
 		Enhancer.registerStaticCallbacks(subclass, CALLBACKS);
 		return subclass;
 	}
@@ -309,7 +310,7 @@ class ConfigurationClassEnhancer {
 					return enhanceFactoryBean(factoryBean, beanMethod.getReturnType(), beanFactory, beanName);
 				}
 			}
-			// 当前执行的方法是不是正常创建的 bean
+			// ⭐️ 如果代理对象正在执行的方法就是正在创建 Bean 的工厂方法，那么就执行对应的方法得到对象来作为 bean 对象
 			if (isCurrentlyInvokedFactoryMethod(beanMethod)) {
 				// The factory is calling the bean method in order to instantiate and register the bean
 				// (i.e. via a getBean() call) -> invoke the super implementation of the method to actually
@@ -324,10 +325,11 @@ class ConfigurationClassEnhancer {
 									"these container lifecycle issues; see @Bean javadoc for complete details.",
 							beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName()));
 				}
-				// 直接执行
+				// ⭐️ 执行代理对象的父类的方法，也就是执行原生的方法
 				return cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs);
 			}
-			// 通过 getBean 获取
+
+			// ⭐️ 通过 getBean 获取
 			return resolveBeanReference(beanMethod, beanMethodArgs, beanFactory, beanName);
 		}
 
@@ -355,7 +357,7 @@ class ConfigurationClassEnhancer {
 						}
 					}
 				}
-				// 通过 getBean 获取对象
+				// ⭐️ 通过 getBean 获取对象
 				Object beanInstance = (useArgs ? beanFactory.getBean(beanName, beanMethodArgs) :
 						beanFactory.getBean(beanName));
 				if (!ClassUtils.isAssignableValue(beanMethod.getReturnType(), beanInstance)) {
@@ -439,7 +441,9 @@ class ConfigurationClassEnhancer {
 		 * to happen on Groovy classes).
 		 */
 		private boolean isCurrentlyInvokedFactoryMethod(Method method) {
+			// 从 currentlyInvokedFactoryMethod 中获取正在执行的当前方法
 			Method currentlyInvoked = SimpleInstantiationStrategy.getCurrentlyInvokedFactoryMethod();
+			// 判断是否就是当前要执行的方法
 			return (currentlyInvoked != null && method.getName().equals(currentlyInvoked.getName()) &&
 					Arrays.equals(method.getParameterTypes(), currentlyInvoked.getParameterTypes()));
 		}

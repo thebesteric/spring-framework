@@ -186,6 +186,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			// 二级缓存也不存在，并且允许循环依赖
 			if (singletonObject == null && allowEarlyReference) {
+				// ❌ 在这里加锁已经晚了，因为已经尝试从二级缓存中获取了对象，应该在获取二级缓存之前，就加锁
+				// 🌍 参考：https://github.com/spring-projects/spring-framework/pull/26376
 				synchronized (this.singletonObjects) {
 					// Consistent creation of early reference within full singleton lock
 					// DCL 双重检查
@@ -199,8 +201,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 							if (singletonFactory != null) {
 								// 执行 lambda 表达式创建
 								singletonObject = singletonFactory.getObject();
-								// 加入到二级缓存中去
+								// 加入到二级缓存中去（也就是二级缓存中的半成品 bean 就是三级缓存 lambda 表达式的执行结果）
+								// 可能是一个原始 bean，也可能是 bean 的代理对象
 								this.earlySingletonObjects.put(beanName, singletonObject);
+								// ❌ 这里如果执行 Thread.sleep(1000 * 10) 的话，多线程获取 bean 就会从二级缓存中获取，结果是：属性没有值
 								// 从三级缓存中删除
 								this.singletonFactories.remove(beanName);
 							}

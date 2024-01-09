@@ -1,6 +1,5 @@
-package com.sourceflag.spring.mybatis.anno;
+package com.sourceflag.spring.mybatis.spring;
 
-import com.sourceflag.spring.mybatis.factory.MyBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.ElementType;

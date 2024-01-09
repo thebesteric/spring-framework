@@ -1,9 +1,9 @@
 package com.sourceflag.spring.test;
 
-import com.sourceflag.spring.test.service.C;
-import com.sourceflag.spring.test.service.TestService;
-import com.sourceflag.spring.test.service.UserService;
+import com.sourceflag.spring.test.service.D;
+import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,6 +21,7 @@ public class Test {
 	public static void main(String[] args) throws IOException {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(Config.class);
+		// ((DefaultListableBeanFactory)context.getBeanFactory()).setAllowBeanDefinitionOverriding(false);
 		context.refresh();
 
 		context.registerShutdownHook();
@@ -48,24 +49,35 @@ public class Test {
 		// System.out.println(httpResource.getURL());
 
 
-		UserService userService = (UserService) context.getBean("userService");
-		System.out.println(userService);
-		userService.test();
-		userService.test();
+		// UserService userService = (UserService) context.getBean("userService");
+		// System.out.println(userService);
+		// userService.test();
+		// userService.test();
 
-		C c = context.getBean(C.class);
-		System.out.println("c = " + c);
-		System.out.println(c.getB());
+		// C c = context.getBean(C.class);
+		// System.out.println("c = " + c);
+		// System.out.println(c.getB());
 
 
-		@SuppressWarnings({"rawtypes"})
-		TestService testService = context.getBean(TestService.class);
-		testService.test();
+		// @SuppressWarnings({"rawtypes"})
+		// TestService testService = context.getBean(TestService.class);
+		// testService.test();
+
+		// A bean = context.getBean(A.class);
+		// System.out.println(bean);
+
+		System.out.println(context.getBean(D.class));
 	}
 
 	@Configuration
 	@ComponentScan("com.sourceflag.spring.test")
 	public static class Config {
+
+		@Bean(autowire = Autowire.BY_TYPE)
+		// @Bean(autowire = Autowire.BY_NAME)
+		public D d() {
+			return new D();
+		}
 
 	}
 

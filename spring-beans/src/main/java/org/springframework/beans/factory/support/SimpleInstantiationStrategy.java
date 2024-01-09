@@ -60,7 +60,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
-		// 是否含有 @Lookup 注解
+		// ⭐️ 判断 BD 对应的 beanClass 是否含有 @Lookup 注解
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
@@ -76,6 +76,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
 						}
 						else {
+							// ⭐️ 使用无参构造方法
 							constructorToUse = clazz.getDeclaredConstructor();
 						}
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
@@ -85,12 +86,13 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
-			// 使用构造方法反射实例化
+			// ⭐️ 使用构造方法反射实例化（因为没有传递任何参数）
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
 			// Must generate CGLIB subclass.
-			// 含有 @Lookup 注解，则必须创建一个代理对象
+			// ⭐️ 含有 @Lookup 注解，则会创建一个代理对象
+			// 使用子类：CglibSubclassingInstantiationStrategy
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}
@@ -153,7 +155,12 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 
 			Method priorInvokedFactoryMethod = currentlyInvokedFactoryMethod.get();
 			try {
+				// ⭐️ 记录当前正在执行的方法，也就是 @Bean 修饰的方法
 				currentlyInvokedFactoryMethod.set(factoryMethod);
+				// ⭐️ 利用反射执行 @Bean 所修饰的方法
+				// ⭐️ 当这个方法执行的时候，就会进入 BeanMethodInterceptor 的 intercept 方法中
+				// factoryBean 就是 AppConfig 的代理对象
+				// factoryMethod 就是 @Bean 修饰的方法
 				Object result = factoryMethod.invoke(factoryBean, args);
 				if (result == null) {
 					result = new NullBean();

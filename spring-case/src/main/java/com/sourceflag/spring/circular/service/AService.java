@@ -17,7 +17,7 @@ public class AService {
 	private BService bService;
 
 	public void test(){
-
+		System.out.println("Testing AService: bService = " + bService);
 	}
 
 }

@@ -72,8 +72,8 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 	@Override
 	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			@Nullable Constructor<?> ctor, Object... args) {
-
 		// Must generate CGLIB subclass...
+		// 产生一个代理对象
 		return new CglibSubclassCreator(bd, owner).instantiate(ctor, args);
 	}
 
@@ -125,7 +125,9 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			// enhanced class (via the Enhancer) in order to avoid memory leaks.
 			Factory factory = (Factory) instance;
 			factory.setCallbacks(new Callback[] {NoOp.INSTANCE,
+					// ⭐️ 处理 @Lookup 注解
 					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),
+					// ⭐️ 处理 XML 中的 replace-method 标签
 					new ReplaceOverrideMethodInterceptor(this.beanDefinition, this.owner)});
 			return instance;
 		}
@@ -227,12 +229,13 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
 			// Cast is safe, as CallbackFilter filters are used selectively.
-			// 检查是否有 @Lookup 注解
+			// ⭐️ 检查是否有 @Lookup 注解
+			// methodOverrides 是在推断构造方法的阶段，就会寻找 @Lookup 注解的方法，然后设置到 methodOverrides 中
 			LookupOverride lo = (LookupOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
 			Assert.state(lo != null, "LookupOverride not found");
 			Object[] argsToUse = (args.length > 0 ? args : null);  // if no-arg, don't insist on args at all
 			if (StringUtils.hasText(lo.getBeanName())) {
-				// 直接获取 @Lookup 的值，然后 getBean 获取对象
+				// ⭐️ 直接获取 @Lookup 的值，然后 getBean 获取对象
 				Object bean = (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
 						this.owner.getBean(lo.getBeanName()));
 				// Detect package-protected NullBean instance through equals(null) check
@@ -261,10 +264,12 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
+			// 对应 XML 中的 replace-method 标签，所替换的类，需要继承 MethodReplacer 接口，实现 reimplement 方法
 			ReplaceOverride ro = (ReplaceOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
 			Assert.state(ro != null, "ReplaceOverride not found");
 			// TODO could cache if a singleton for minor performance optimization
 			MethodReplacer mr = this.owner.getBean(ro.getMethodReplacerBeanName(), MethodReplacer.class);
+			// 调用 reimplement 方法
 			return mr.reimplement(obj, method, args);
 		}
 	}

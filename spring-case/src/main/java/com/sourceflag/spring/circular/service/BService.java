@@ -15,4 +15,8 @@ import org.springframework.stereotype.Component;
 public class BService {
 	@Autowired
 	private AService aService;
+
+	public void test(){
+		System.out.println("Testing BService: aService = " + aService);
+	}
 }

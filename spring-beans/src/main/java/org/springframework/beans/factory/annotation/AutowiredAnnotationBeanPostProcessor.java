@@ -238,23 +238,25 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		this.injectionMetadataCache.remove(beanName);
 	}
 
+	// ⭐️ 寻找那一些构造方法上面加了 @Autowired 注解
 	@Override
 	@Nullable
 	public Constructor<?>[] determineCandidateConstructors(Class<?> beanClass, final String beanName)
 			throws BeanCreationException {
 
 		// Let's check for lookup methods here...
-		// 是否检查过 lookup 方法
+		// ⭐️ 是否检查过 lookup 方法
 		if (!this.lookupMethodsChecked.contains(beanName)) {
 			if (AnnotationUtils.isCandidateClass(beanClass, Lookup.class)) {
 				try {
 					Class<?> targetClass = beanClass;
 					do {
-						// 寻找方法上是否有 @Lookup 注解
+						// ⭐️ 寻找 targetClass 中的方法，哪勰上有 @Lookup 注解
 						ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 							Lookup lookup = method.getAnnotation(Lookup.class);
 							if (lookup != null) {
 								Assert.state(this.beanFactory != null, "No BeanFactory available");
+								// 将当前 method 和 @Lookup 的值，封装为 LookupOverride，并设置到 BD 的 methodOverrides 中
 								LookupOverride override = new LookupOverride(method, lookup.value());
 								try {
 									RootBeanDefinition mbd = (RootBeanDefinition)
@@ -280,8 +282,8 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
-		// ★ candidateConstructorsCache：存放已经被推断完成的类和该类被推断出来的构造方法的集合
-		// 检查当前的类是否在 candidateConstructorsCache 中已经存在了已经推断过的构造方法，如果被推断过，就直接拿出来使用
+		// ⭐️ 检查当前的类是否在 candidateConstructorsCache 中已经存在了已经推断过的构造方法，如果被推断过，就直接拿出来使用
+		// candidateConstructorsCache：存放已经被推断完成的类和该类被推断出来的构造方法的集合
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 
 		if (candidateConstructors == null) {
@@ -302,12 +304,15 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					}
 					// 存放合格的构造方法，但是合格，并不代表都可用
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
-					// 必要的构造方法，比如在构造方法上加 @Autowired(required=true)，有且只能有一个
+
+					// ⭐️ 必要的构造方法，比如在构造方法上加 @Autowired(required=true)，有且只能有一个
 					Constructor<?> requiredConstructor = null;
-					// 默认无参构造方法
+					// ⭐️ 默认无参构造方法
 					Constructor<?> defaultConstructor = null;
-					// 推断主要的构造方法委托给 Kotlin，如果对于 Java 类，永远返回 null
+
+					// Kotlin 相关，可以忽略：推断主要的构造方法委托给 Kotlin，如果对于 Java 类，永远返回 null
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
+
 					// 定义一个变量记录非合成的构造方法
 					int nonSyntheticConstructors = 0;
 					for (Constructor<?> candidate : rawCandidates) {
@@ -319,7 +324,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 						}
 						// 检查构造方法上有没有 @Autowired 注解，并拿出 注解上的 属性
 						MergedAnnotation<?> ann = findAutowiredAnnotation(candidate);
-						// 没有 @Autowired 注解的情况
+						// 🏷️ 没有 @Autowired 注解的情况
 						if (ann == null) {
 							// 看看 beanClass 是否是 CGLIB 代理类，并且是否有父类
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
@@ -327,6 +332,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								try {
 									Constructor<?> superCtor =
 											userClass.getDeclaredConstructor(candidate.getParameterTypes());
+									// 查看被代理的类上是否有 @Autowired 注解
 									ann = findAutowiredAnnotation(superCtor);
 								}
 								catch (NoSuchMethodException ex) {
@@ -334,17 +340,17 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								}
 							}
 						}
-						// 有 @Autowired 注解的情况
+						// 🏷️ 有 @Autowired 注解的情况
 						if (ann != null) {
+							// ⭐️ 如果发现 requiredConstructor != null，则表示又出现了 @Autowired 的构造方法（无论 true 还是 false），抛异常
 							// 有注解，并且 @Autowired(required=true)，但是第一次肯定等于 null
-							// 如果发现 requiredConstructor != null，则表示又出现了 @Autowired 的构造方法（无论 true 还是 false），抛异常
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
 										". Found constructor with 'required' Autowired annotation already: " +
 										requiredConstructor);
 							}
-							// 检查注解是否有 required 的属性
+							// ⭐️ 检查 @Autowired 的 required 是否是 true
 							boolean required = determineRequiredStatus(ann);
 							if (required) {
 								// candidates.isEmpty() 如果不是空，表示已经解析到一个 @Autowired 的构造方法
@@ -355,29 +361,31 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 											". Found constructor with 'required' Autowired annotation: " +
 											candidate);
 								}
-								// 记录唯一的一个 required 为 true 的构造方法
+								// ⭐️ 记录唯一的一个 required 为 true 的构造方法
 								// 给 requiredConstructor 赋值为 找到的构造方法
 								requiredConstructor = candidate;
 							}
 							// 将构造方法放到 candidates 集合中
-							// 记录了所有加了 @Autowired 注解的构造方法，无论 required 是 true 还是 false
+							// ⭐️ 记录了所有加了 @Autowired 注解的构造方法，无论 required 是 true 还是 false
 							// 如果无参的构造方法也加了 @Autowired 注解的话，也会被记录
 							candidates.add(candidate);
 						}
-						// ★★★ 当没有提供 @Autowired 注解，且构造方法没有任何参数（说明是默认构造方法）的时候才会找到默认构造方法
+						// ⭐️🏷️ 当没有提供 @Autowired 注解，且构造方法没有任何参数（说明是默认构造方法）的时候才会找到默认构造方法
 						// 这里很重要，也就是当提供了多个构造函数的时候，又没有特殊指定 @Autowired 注解，就会去找默认构造函数
 						else if (candidate.getParameterCount() == 0) {
 							// 记录了一个无参的构造方法
 							defaultConstructor = candidate;
 						}
 					}
+
 					// 如果添加了 @Autowired 注解的构造方法
-					// candidates 里面到底存放的是什么？
-					// 情况1、candidates 只有一个 required = true 的唯一构造方法
-					// 情况2、candidates 会有多个 required = false 的所有构造方法，如果提供了无参构造方法，也会加入
+					// ⭐️ candidates 里面到底存放的是什么？
+					// 🏷 情况1、candidates 只有一个 required = true 的唯一构造方法
+					// 🏷 情况2、candidates 会有多个 required = false 的所有构造方法，如果提供了无参构造方法，也会加入
+					// 🏷 情况3、candidates 是空的，这种情况通常是没有任何 @Autowired 注解
 					if (!candidates.isEmpty()) {
 						// Add default constructor to list of optional constructors, as fallback.
-						// 如果没有指定 required = true 的构造方法，那么就把所有构造方法添加到 candidates 中
+						// 如果没有指定 required = true 的构造方法，那么就把默认的构造方法（无参构造）添加到 candidates 中
 						if (requiredConstructor == null) {
 							// 如果存在无参构造方法
 							if (defaultConstructor != null) {
@@ -391,11 +399,11 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 										"default constructor to fall back to: " + candidates.get(0));
 							}
 						}
-						// 推断多个构造方法
+						// 转数组
 						candidateConstructors = candidates.toArray(new Constructor<?>[0]);
 					}
 					// 如果没有提供 @Autowired 注解的构造方法
-					// ★ 类只提供了一个构造方法，并且是含参的
+					// 🏷 类只提供了一个构造方法，并且是含参的
 					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterCount() > 0) {
 						candidateConstructors = new Constructor<?>[] {rawCandidates[0]};
 					}
@@ -418,7 +426,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				}
 			}
 		}
-		// 返回多个构造方法的情况是：有多个 @Autowired(required=false)，才会成立
+		// ⭐️ 返回多个构造方法的情况是：有多个 @Autowired(required=false)，才会成立
 		return (candidateConstructors.length > 0 ? candidateConstructors : null);
 	}
 
@@ -660,7 +668,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	@Nullable
 	private Object resolvedCachedArgument(@Nullable String beanName, @Nullable Object cachedArgument) {
 		if (cachedArgument instanceof DependencyDescriptor) {
-			// ShortcutDependencyDescriptor
+			// cachedArgument 为 ShortcutDependencyDescriptor 继承了 DependencyDescriptor
 			DependencyDescriptor descriptor = (DependencyDescriptor) cachedArgument;
 			Assert.state(this.beanFactory != null, "No BeanFactory available");
 			return this.beanFactory.resolveDependency(descriptor, beanName, null, null);
@@ -694,6 +702,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			Object value;
 			// 判断是否缓存过（多线程的情况下，可能 cached 为 true）
 			if (this.cached) {
+				// 对于原型 bean，第一次创建的时候也要找注入点，然后进行注入，此时 cached 为 false，注入完成之后 cached 为 true
+				// 第二次创建的时候，先找注入点（此时会获取缓存好的注入点），也就是 AutowiredFieldElement 对象
+				// 此时 cached 为 true，cachedFieldValue 为 ShortcutDependencyDescriptor
+				// 注入点内并没有缓存被注入的具体 bean 对象，而是 beanName，这样就能保证原型 bean 注入的对象是不同的
 				value = resolvedCachedArgument(beanName, this.cachedFieldValue);
 			}
 			else {
@@ -701,7 +713,9 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				DependencyDescriptor desc = new DependencyDescriptor(field, this.required);
 				desc.setContainingClass(bean.getClass());
 
+				// 这个集合存储着所有符合条件的 beanName
 				Set<String> autowiredBeanNames = new LinkedHashSet<>(1);
+
 				Assert.state(beanFactory != null, "No BeanFactory available");
 				TypeConverter typeConverter = beanFactory.getTypeConverter();
 				try {
@@ -720,18 +734,21 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 						if (value != null || this.required) {
 							cachedFieldValue = desc;
 							registerDependentBeans(beanName, autowiredBeanNames);
+
+							// 如果集合中只有一个符合条件的 bean
 							if (autowiredBeanNames.size() == 1) {
 								String autowiredBeanName = autowiredBeanNames.iterator().next();
 								if (beanFactory.containsBean(autowiredBeanName) &&
 										beanFactory.isTypeMatch(autowiredBeanName, field.getType())) {
-									// ★★★ 将 cachedFieldValue 的值替换为 ShortcutDependencyDescriptor
+									// ⭐️ 将 cachedFieldValue 的值替换为 ShortcutDependencyDescriptor
 									// ShortcutDependencyDescriptor 记录了当前 bean 需要注入的属性信息
-									// ShortcutDependencyDescriptor 提供了一个快捷获取 bean 的方式，就是直接从单例池中获取
+									// 并提供了一个快捷获取 bean 的方式，就是直接从单例池中获取
 									cachedFieldValue = new ShortcutDependencyDescriptor(
 											desc, autowiredBeanName, field.getType());
 								}
 							}
 						}
+						// 缓存的就是 ShortcutDependencyDescriptor 对象
 						this.cachedFieldValue = cachedFieldValue;
 						// 标记为已缓存
 						this.cached = true;
@@ -884,6 +901,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		@Override
 		public Object resolveShortcut(BeanFactory beanFactory) {
 			// 直接从单例池中通过名字和类型获取 bean
+			// shortcut 就是 beanName
 			return beanFactory.getBean(this.shortcut, this.requiredType);
 		}
 	}

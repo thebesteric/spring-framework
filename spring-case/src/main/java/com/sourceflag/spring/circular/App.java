@@ -1,7 +1,6 @@
 package com.sourceflag.spring.circular;
 
 import com.sourceflag.spring.circular.service.AService;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;

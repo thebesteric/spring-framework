@@ -87,11 +87,12 @@ public class AnnotatedBeanDefinitionReader {
 		this.registry = registry;
 		// 构建来一个解析 @Condition 注解的解析器
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
-		// 1、注册了解析 @Configuration 配置类：ConfigurationClassPostProcessor.class 是一个 BeanFactoryPostProcessor
-		// 2、注册了解析 @Autowired 配置类：AutowiredAnnotationBeanPostProcessor.class
-		// 3、注册了解析 @Resource 配置类：CommonAnnotationBeanPostProcessor.class
-		// 4、注册了解析 @EventListener 方法的配置类：EventListenerMethodProcessor.class
-		// 5、注册了解析 @EventListener 方法的配置类：DefaultEventListenerFactory.class
+		// 1、注册了解析 @Configuration 配置类：ConfigurationClassPostProcessor.class,是一个 BeanFactoryPostProcessor
+		// 2、注册了解析 @Autowired 配置类：AutowiredAnnotationBeanPostProcessor.class，是一个 BeanPostProcessor
+		// 3、注册了解析 @Resource 配置类：CommonAnnotationBeanPostProcessor.class，是一个 BeanPostProcessor
+		// 4. 注册了处理 JPA 相关的类：PersistenceAnnotationBeanPostProcessor.class，是一个 BeanPostProcessor
+		// 5、注册了解析 @EventListener 方法的配置类：EventListenerMethodProcessor.class,是一个 BeanFactoryPostProcessor
+		// 6、注册了解析 @EventListener 方法的配置类：DefaultEventListenerFactory.class
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -293,7 +294,7 @@ public class AnnotatedBeanDefinitionReader {
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 
-		// 注册配置类
+		// ⭐️ 注册配置类
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

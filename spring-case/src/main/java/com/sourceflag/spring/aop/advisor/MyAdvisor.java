@@ -17,7 +17,7 @@ import java.lang.reflect.Method;
  * @date 2021-01-01 00:50
  * @since 1.0
  */
-// @Component
+@Component
 public class MyAdvisor implements PointcutAdvisor {
 
 	@Override

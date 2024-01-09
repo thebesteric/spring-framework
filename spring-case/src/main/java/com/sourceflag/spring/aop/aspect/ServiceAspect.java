@@ -17,8 +17,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServiceAspect {
 
-	@Before("execution(public void com.sourceflag.spring.aop.service.*.*())")
-	public void before(JoinPoint joinPoint) {
+	// 注解 + 方法 = PointCut + Advice = Advisor
+	@Before("execution(public void com.sourceflag.spring.aop.service.*.*())") // PointCut
+	public void before(JoinPoint joinPoint) { // Advice
 		System.out.println(getMethodName(joinPoint) + " before");
 	}
 

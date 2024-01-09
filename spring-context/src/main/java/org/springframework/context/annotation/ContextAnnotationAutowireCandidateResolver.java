@@ -89,11 +89,11 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 				return false;
 			}
 
-			// ⭐️ 当使用代理对象（@Lazy 注解的对象）时，会调用 getTarget 的方法
+			// ⭐️ 当调用代理对象（@Lazy 注解的对象）的某个方法的时候，会调用 getTarget 的方法，才开始真正的解析这个对象，然后在调用这个对象的方法
 			@Override
 			public Object getTarget() {
 				Set<String> autowiredBeanNames = (beanName != null ? new LinkedHashSet<>(1) : null);
-				// ⭐️ 当调用代理对象的某个方法的时候，才开始真正的解析这个对象，然后在调用这个对象的方法
+				// ⭐️ 完成依赖注入等动作，返回被代理对象
 				Object target = dlbf.doResolveDependency(descriptor, beanName, autowiredBeanNames, null);
 				if (target == null) {
 					Class<?> type = getTargetClass();
@@ -126,6 +126,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 		ProxyFactory pf = new ProxyFactory();
 		pf.setTargetSource(ts);
 		Class<?> dependencyType = descriptor.getDependencyType();
+		// 是否有接口
 		if (dependencyType.isInterface()) {
 			pf.addInterface(dependencyType);
 		}

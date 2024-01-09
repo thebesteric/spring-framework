@@ -16,17 +16,16 @@
 
 package org.springframework.context.event;
 
-import java.util.concurrent.Executor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ErrorHandler;
+
+import java.util.concurrent.Executor;
 
 /**
  * Simple implementation of the {@link ApplicationEventMulticaster} interface.
@@ -130,16 +129,17 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
-		// 判断当前多播器是否为异步多播器
+		// 获取线程池
 		Executor executor = getTaskExecutor();
 		// 获取多播器中所有的监听器
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
+			// 判断当前多播器是否为异步多播器
 			if (executor != null) {
 				// 异步发送
 				executor.execute(() -> invokeListener(listener, event));
 			}
 			else {
-				// 同步发送
+				// 默认情况：同步发送
 				invokeListener(listener, event);
 			}
 		}
@@ -173,8 +173,8 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void doInvokeListener(ApplicationListener listener, ApplicationEvent event) {
 		try {
-			// 1、接口方式会直接调用监听器的 onApplicationEvent 方法
-			// 2、注解版的会直接调用 ApplicationListenerMethodAdapter 的 onApplicationEvent 方法
+			// 1、接口方式（实现 ApplicationListener 接口）：会直接调用监听器的 onApplicationEvent 方法
+			// 2、注解方式（方法上添加 @EventListener）：会直接调用 ApplicationListenerMethodAdapter 的 onApplicationEvent 方法
 			listener.onApplicationEvent(event);
 		}
 		catch (ClassCastException ex) {

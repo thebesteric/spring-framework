@@ -3,7 +3,8 @@ package com.sourceflag.spring.aop;
 import com.sourceflag.spring.aop.demo.SimpleCalculate;
 import com.sourceflag.spring.aop.service.OrderService;
 import com.sourceflag.spring.aop.service.UserService;
-import com.sourceflag.spring.aop.service.UserServiceInterface;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
@@ -11,6 +12,9 @@ import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.NameMatchMethodPointcut;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * App
@@ -30,6 +34,11 @@ public class App {
 		ctx.register(Config.class);
 		ctx.refresh();
 
+		System.out.println("====== 使用 ProxyFactoryBean 代理 OrderService ======");
+		OrderService testService = (OrderService) ctx.getBean("testService");
+		testService.test();
+		System.out.println("====================================================");
+
 		SimpleCalculate simpleCalculate = (SimpleCalculate) ctx.getBean("simpleCalculate");
 		simpleCalculate.add(1, 2);
 
@@ -42,7 +51,7 @@ public class App {
 		// 除非 proxyTargetClass = true 会强制使用 CGLIB 动态代理
 		userService.test();
 
-		OrderService orderService = ctx.getBean(OrderService.class);
+		OrderService orderService = ctx.getBean("orderService", OrderService.class);
 		orderService.test(); // CGLIB 动态代理
 
 		// SpringProxy springProxy = (SpringProxy) orderService;
@@ -59,32 +68,45 @@ public class App {
 	@ComponentScan("com.sourceflag.spring.aop")
 	@EnableAspectJAutoProxy(exposeProxy = true, proxyTargetClass = true) // exposeProxy = true，不但会去寻找 Advisor 类型的 bean，还会去寻找 @Aspect 注解的 bean
 	// @EnableAspectJAutoProxy(proxyTargetClass = true) // proxyTargetClass = true，表示强制使用 CGLIB 动态代理
+	// @Import(DefaultAdvisorAutoProxyCreator.class) // 只会去查找 Advisor 类型的 bean
+	// @Import(AnnotationAwareAspectJAutoProxyCreator.class) // 不仅会去查找 Advisor 类型的 bean，还会解析 @Before、@After、@Around 等注解
 	public static class Config {
 
 		/**
 		 * 让某个普通类成为代理对象
+		 * 其实底层就是一个 FactoryBean
 		 */
-		// @Bean
+		@Bean
 		public ProxyFactoryBean testService() {
-			OrderService testService = new OrderService();
+			OrderService orderService = new OrderService();
 			ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
-			proxyFactoryBean.addAdvice(new MyAroundAdvice());
-			proxyFactoryBean.setTarget(testService);
+			proxyFactoryBean.addAdvice(new MethodInterceptor() {
+				@Nullable
+				@Override
+				public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
+					System.out.println("before...");
+					Object proceed = invocation.proceed();
+					System.out.println("after...");
+					return proceed;
+				}
+			});
+			proxyFactoryBean.setTarget(orderService);
 			return proxyFactoryBean;
 		}
 
 		/**
-		 * 让某个 bean 成为代理对象
+		 * 让某个 bean 成为代理对象，只能通过名字来代理
 		 */
 		// @Bean // 需要关闭 @EnableAspectJAutoProxy
 		public BeanNameAutoProxyCreator beanNameAutoProxyCreator() {
 			// BeanNameAutoProxyCreator 其实是 BeanPostProcessor
 			BeanNameAutoProxyCreator beanNameAutoProxyCreator = new BeanNameAutoProxyCreator();
-			beanNameAutoProxyCreator.setBeanNames("userService");
-			beanNameAutoProxyCreator.setInterceptorNames("myAdvisor");
+			beanNameAutoProxyCreator.setBeanNames("userSe*"); // 查找符合条件的 bean，作为代理对象
+			beanNameAutoProxyCreator.setInterceptorNames("myAdvisor"); // 查找符合条件的 bean，作为代理逻辑
 			return beanNameAutoProxyCreator;
 		}
 
+		// 会被 DefaultAdvisorAutoProxyCreator 寻找到
 		@Bean
 		public DefaultPointcutAdvisor defaultPointcutAdvisor() {
 			NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
@@ -106,7 +128,7 @@ public class App {
 		}
 
 		@Component
-		public static class Test{
+		public static class Test {
 
 		}
 

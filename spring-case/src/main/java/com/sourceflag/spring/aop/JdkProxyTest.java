@@ -18,11 +18,13 @@ import java.lang.reflect.Proxy;
 public class JdkProxyTest {
 
 	public static void main(String[] args) {
+
+		UserService target = new UserService();
 		UserServiceInterface proxyInstance = (UserServiceInterface) Proxy.newProxyInstance(JdkProxyTest.class.getClassLoader(), UserService.class.getInterfaces(), new InvocationHandler() {
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 				System.out.println("代理前的逻辑...");
-				Object result = method.invoke(new UserService(), args);
+				Object result = method.invoke(target, args);
 				System.out.println("代理后的逻辑...");
 				return result;
 			}

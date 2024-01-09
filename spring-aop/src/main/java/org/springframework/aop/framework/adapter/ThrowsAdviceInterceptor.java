@@ -16,19 +16,18 @@
 
 package org.springframework.aop.framework.adapter;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.AfterAdvice;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Interceptor to wrap an after-throwing advice.
@@ -78,9 +77,11 @@ public class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice {
 
 		Method[] methods = throwsAdvice.getClass().getMethods();
 		for (Method method : methods) {
+			// 所以方法的名字必须为 afterThrowing，且参数的个数必须是 1 个，或 4 个，最后一个参数必须是 Throwable
 			if (method.getName().equals(AFTER_THROWING) &&
 					(method.getParameterCount() == 1 || method.getParameterCount() == 4)) {
 				Class<?> throwableParam = method.getParameterTypes()[method.getParameterCount() - 1];
+				// 无论是第一个还是第四个参数，类型都必须是 Throwable
 				if (Throwable.class.isAssignableFrom(throwableParam)) {
 					// An exception handler to register...
 					this.exceptionHandlerMap.put(throwableParam, method);
@@ -110,11 +111,14 @@ public class ThrowsAdviceInterceptor implements MethodInterceptor, AfterAdvice {
 	@Nullable
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		try {
+			// 尝试执行
 			return mi.proceed();
 		}
 		catch (Throwable ex) {
+			// 获取异常对应的方法
 			Method handlerMethod = getExceptionHandler(ex);
 			if (handlerMethod != null) {
+				// 调用代理逻辑
 				invokeHandlerMethod(mi, ex, handlerMethod);
 			}
 			throw ex;

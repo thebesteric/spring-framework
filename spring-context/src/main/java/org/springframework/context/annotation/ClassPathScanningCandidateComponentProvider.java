@@ -194,11 +194,12 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
-		// 通过 includeFilters 机制，去注册扫描 @Component 注解的的过滤器
+		// ⭐️ 通过 includeFilters 机制，去注册扫描 @Component 注解的的过滤器
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
+
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
 		try {
-			// 扫描 JSR-250 规范 @ManagedBean
+			// ⭐️ 扫描 JSR-250 规范 @ManagedBean
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
 			logger.trace("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
@@ -207,7 +208,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
 		try {
-			// 扫描 JSR-330 规范 @Named
+			// ⭐️ 扫描 JSR-330 规范 @Named
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
 			logger.trace("JSR-330 'javax.inject.Named' annotation found and supported for component scanning");
@@ -434,14 +435,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 						// 元数据读取器，可以获取类掉相关信息
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
 						// 是不是候选的 bean，也就是是不是 excludeFilters 或 includeFilters 指定的
-						// ★★★ 其中 includeFilters 会默认注册一个 this.includeFilters.add(new AnnotationTypeFilter(Component.class)); 保证可以扫描到 @Component 注解的类
+						// ⭐️ 其中 includeFilters 会默认注册一个 this.includeFilters.add(new AnnotationTypeFilter(Component.class)); 保证可以扫描到 @Component 注解的类
 						// excludeFilter 会执行前面注册的一段回调函数，排除注册类
 						if (isCandidateComponent(metadataReader)) {
-							// ★★★ 通过扫描出来的候选 bean 会是 ScannedGenericBeanDefinition 类型
+							// ⭐️ 通过扫描出来的候选 bean 会是 ScannedGenericBeanDefinition 类型
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							// 设置 class 源路径
 							sbd.setSource(resource);
-							// ★★★ 是否是接口或者抽象类
+							// ⭐️ 是否是接口或者抽象类
 							// MyBatis 是一个接口，但是也能被扫描到，是应为重写了 isCandidateComponent 方法
 							if (isCandidateComponent(sbd)) {
 								if (debugEnabled) {
@@ -500,18 +501,18 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return whether the class qualifies as a candidate component
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
-		// 排除的
+		// ⭐️ 排除的
 		// excludeFilters 会默认排除掉配置类
 		for (TypeFilter tf : this.excludeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return false;
 			}
 		}
-		// 包含的
+		// ⭐️ 包含的
 		// includeFilters 会默认包含一个含有 @Component 注解的过滤器
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
-				// 是否有 @Conditional 条件注解
+				// ⭐️ 是否有 @Conditional 条件注解
 				return isConditionMatch(metadataReader);
 			}
 		}

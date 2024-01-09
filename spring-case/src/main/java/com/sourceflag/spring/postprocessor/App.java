@@ -17,5 +17,7 @@ public class App {
 		UserService userService = context.getBean(UserService.class);
 		userService.test();
 		System.out.println(context.getBean(OrderService.class));
+
+		System.out.println(context.getBean(TestService.class));
 	}
 }

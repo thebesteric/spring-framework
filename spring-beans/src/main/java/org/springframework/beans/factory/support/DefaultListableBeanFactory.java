@@ -149,6 +149,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 * Create a new DefaultListableBeanFactory.
 	 */
 	public DefaultListableBeanFactory() {
+		// 调用父类
 		super();
 	}
 
@@ -992,7 +993,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
-		// 出现重复
+		// ⭐️ 出现重复
 		if (existingDefinition != null) {
 			// 是否允许覆盖，默认是允许的
 			if (!isAllowBeanDefinitionOverriding()) {
@@ -1020,14 +1021,16 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
-			// 后者覆盖前者
+			// ⭐️ 后者覆盖前者
+			// 因为 @Bean 是后解析的，而 @Component 是先解析的
+			// 所以 @Bean 和 @Component 名称相同的话，@Bean 会覆盖 @Component 定义的 BD
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
 				synchronized (this.beanDefinitionMap) {
-					// 加入到 beanDefinitionMap 中
+					// ⭐️ 加入到 beanDefinitionMap 中
 					this.beanDefinitionMap.put(beanName, beanDefinition);
 					List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
 					updatedDefinitions.addAll(this.beanDefinitionNames);
@@ -1621,8 +1624,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
 
-		// 根据类型从 resolvableDependencies 中匹配 bean
-		// resolvableDependencies 的 key 是类型，value 是对象，如：{BeanFactory.class : beanFactory}
+		// ⭐️ 根据类型从 resolvableDependencies 中匹配 bean
+		// resolvableDependencies 的 key 是类型，value 是对象，如：[{BeanFactory.class: beanFactory}, {ApplicationContext.class: applicationContext}]
+		// resolvableDependencies 是在 beanFactory 初始化的时候添加的
 		// Spring 启动的时候，就会在容器中，默认添加几个对象，程序员也可以手动获取 beanFactory，通过 registerResolvableDependency 进行注册
 		Map<String, Object> result = CollectionUtils.newLinkedHashMap(candidateNames.length);
 		for (Map.Entry<Class<?>, Object> classObjectEntry : this.resolvableDependencies.entrySet()) {

@@ -148,13 +148,20 @@ public abstract class AnnotationConfigUtils {
 	public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
 
+		// BeanDefinitionRegistry 强转为 DefaultListableBeanFactory
 		DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
+
 		if (beanFactory != null) {
-			// 设置一个 Order 比较器
+			// ⭐️ 设置一个 Comparator 比较器，可以用来排序，比如：new ArrayList<>().sort(comparator);
+			// 可以用来比较 @Order 注解或 实现了 Ordered 接口的类
 			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
 				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
-			// 设置一个判断某个 bean 是否可以自动注入的解析器
+			// ⭐️ 设置一个判断某个 bean 是否可以自动注入的解析器
+			// ContextAnnotationAutowireCandidateResolver 继承了 QualifierAnnotationAutowireCandidateResolver
+			// 1. QualifierAnnotationAutowireCandidateResolver：解析 @Qualifier 注解
+			// 2. GenericTypeAwareAutowireCandidateResolver：解析范型
+			// 3. SimpleAutowireCandidateResolver：解析 Bean 的 autowireCandidate 是否为 true
 			if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
 				beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
 			}
@@ -162,21 +169,22 @@ public abstract class AnnotationConfigUtils {
 
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
 
-		// 解析 @Configuration 配置类，继承了 BeanDefinitionRegistryPostProcessor，是 BeanFactoryPostProcessor 的子类
+		// ⭐️ 解析 @Configuration 配置类
+		// 注册 ConfigurationClassPostProcessor 继承了 BeanDefinitionRegistryPostProcessor，是 BeanFactoryPostProcessor 的子类
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
-		// 解析 @Autowired 注解
+		// ⭐️ 解析 @Autowired 注解：AutowiredAnnotationBeanPostProcessor
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
-		// 解析 @Resource 注解
+		// ⭐️ 解析 @Resource 注解：CommonAnnotationBeanPostProcessor
 		// Check for JSR-250 support, and if present add the CommonAnnotationBeanPostProcessor.
 		if (jsr250Present && !registry.containsBeanDefinition(COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class);
@@ -184,7 +192,7 @@ public abstract class AnnotationConfigUtils {
 			beanDefs.add(registerPostProcessor(registry, def, COMMON_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
-		// 处理 JPA 相关
+		// ⭐ 处理 JPA 相关：PersistenceAnnotationBeanPostProcessor
 		// Check for JPA support, and if present add the PersistenceAnnotationBeanPostProcessor.
 		if (jpaPresent && !registry.containsBeanDefinition(PERSISTENCE_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition();
@@ -200,7 +208,7 @@ public abstract class AnnotationConfigUtils {
 			beanDefs.add(registerPostProcessor(registry, def, PERSISTENCE_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
-		// 处理 event 相关
+		// ⭐️ 处理 @EventListener 注解
 		// 实现了 SmartInitializingSingleton 会调用 afterSingletonsInstantiated()
 		if (!registry.containsBeanDefinition(EVENT_LISTENER_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(EventListenerMethodProcessor.class);
@@ -208,7 +216,7 @@ public abstract class AnnotationConfigUtils {
 			beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_PROCESSOR_BEAN_NAME));
 		}
 
-		// 处理 event 相关
+		// ⭐️ 处理 @EventListener 注解
 		// 为标注了 @EventListener 的方法，创建调用监听适配器：ApplicationListenerMethodAdapter
 		if (!registry.containsBeanDefinition(EVENT_LISTENER_FACTORY_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(DefaultEventListenerFactory.class);

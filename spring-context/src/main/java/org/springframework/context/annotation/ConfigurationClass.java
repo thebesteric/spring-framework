@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.factory.parsing.Location;
 import org.springframework.beans.factory.parsing.Problem;
 import org.springframework.beans.factory.parsing.ProblemReporter;
@@ -33,6 +27,8 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.util.*;
 
 /**
  * Represents a user-defined {@link Configuration @Configuration} class.
@@ -62,6 +58,7 @@ final class ConfigurationClass {
 	private final Map<String, Class<? extends BeanDefinitionReader>> importedResources =
 			new LinkedHashMap<>();
 
+	// ⭐️ 用来记录实现类 ImportBeanDefinitionRegistrar 接口的类
 	private final Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> importBeanDefinitionRegistrars =
 			new LinkedHashMap<>();
 
@@ -186,26 +183,32 @@ final class ConfigurationClass {
 	}
 
 	public void addBeanMethod(BeanMethod method) {
+		// ⭐ 记录配置类中 @Bean 的方法
 		this.beanMethods.add(method);
 	}
 
 	public Set<BeanMethod> getBeanMethods() {
+		// ⭐️ 读取配置类中 @Bean 的方法（在解析完配置类之后，会调用）
 		return this.beanMethods;
 	}
 
 	public void addImportedResource(String importedResource, Class<? extends BeanDefinitionReader> readerClass) {
+		// ⭐️ 记录 xml 文件的路径
 		this.importedResources.put(importedResource, readerClass);
 	}
 
 	public void addImportBeanDefinitionRegistrar(ImportBeanDefinitionRegistrar registrar, AnnotationMetadata importingClassMetadata) {
+		// ⭐️ 记录通过 @Import 导入的，且实现类 ImportBeanDefinitionRegistrar 接口的类
 		this.importBeanDefinitionRegistrars.put(registrar, importingClassMetadata);
 	}
 
 	public Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> getImportBeanDefinitionRegistrars() {
+		// ⭐️ 读取通过 @Import 导入的，且实现类 ImportBeanDefinitionRegistrar 接口的类（在解析完配置类之后，会调用）
 		return this.importBeanDefinitionRegistrars;
 	}
 
 	public Map<String, Class<? extends BeanDefinitionReader>> getImportedResources() {
+		// ⭐️ 读取 xml 文件的路径（在解析完配置类之后，会调用）
 		return this.importedResources;
 	}
 

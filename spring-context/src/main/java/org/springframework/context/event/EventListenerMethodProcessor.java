@@ -16,17 +16,8 @@
 
 package org.springframework.context.event;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.framework.autoproxy.AutoProxyUtils;
 import org.springframework.aop.scope.ScopedObject;
 import org.springframework.aop.scope.ScopedProxyUtils;
@@ -49,6 +40,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
+
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Registers {@link EventListener} methods as individual {@link ApplicationListener} instances.
@@ -109,7 +104,8 @@ public class EventListenerMethodProcessor
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
-		// 获取到 DefaultEventListenerFactory
+		// ⭐️ 获取到 DefaultEventListenerFactory
+		// DefaultEventListenerFactory 是在初始化过程中，构建 reader 的时候注册的
 		Map<String, EventListenerFactory> beans = beanFactory.getBeansOfType(EventListenerFactory.class, false, false);
 		List<EventListenerFactory> factories = new ArrayList<>(beans.values());
 		AnnotationAwareOrderComparator.sort(factories);
@@ -117,6 +113,8 @@ public class EventListenerMethodProcessor
 	}
 
 
+	// 在所有的非懒加载的单例 bean 都创建完成后，会调用这个方法
+	// ⭐️ 这里就处理了 @EventListener 注解的方法
 	@Override
 	public void afterSingletonsInstantiated() {
 		ConfigurableListableBeanFactory beanFactory = this.beanFactory;
@@ -152,7 +150,7 @@ public class EventListenerMethodProcessor
 						}
 					}
 					try {
-						// ★★★ 处理含有 @EventListener 方法的 bean
+						// ⭐️ 处理含有 @EventListener 方法的 bean
 						processBean(beanName, type);
 					}
 					catch (Throwable ex) {
@@ -171,7 +169,7 @@ public class EventListenerMethodProcessor
 
 			Map<Method, EventListener> annotatedMethods = null;
 			try {
-				// 查找获取有 @EventListener 注解的方法
+				// ⭐️ 查找获取有 @EventListener 注解的方法
 				annotatedMethods = MethodIntrospector.selectMethods(targetType,
 						(MethodIntrospector.MetadataLookup<EventListener>) method ->
 								AnnotatedElementUtils.findMergedAnnotation(method, EventListener.class));
@@ -198,15 +196,15 @@ public class EventListenerMethodProcessor
 				for (Method method : annotatedMethods.keySet()) {
 					for (EventListenerFactory factory : factories) {
 						if (factory.supportsMethod(method)) {
-							// 获取 @EventListener 的方法
+							// ⭐️ 获取 @EventListener 的方法
 							Method methodToUse = AopUtils.selectInvocableMethod(method, context.getType(beanName));
-							// 创建事件监听器，并绑定上 @EventListener 的方法
+							// ⭐️ 将 @EventListener 的方法，包装成一个 ApplicationListener
 							ApplicationListener<?> applicationListener =
 									factory.createApplicationListener(beanName, targetType, methodToUse);
 							if (applicationListener instanceof ApplicationListenerMethodAdapter) {
 								((ApplicationListenerMethodAdapter) applicationListener).init(context, this.evaluator);
 							}
-							// 加入到容器中的监听器列表中
+							// ⭐️ 加入到容器中的监听器列表中
 							context.addApplicationListener(applicationListener);
 							break;
 						}

@@ -13,10 +13,10 @@ import java.util.List;
  * @since 2023-12-25 14:51:59
  */
 @Component
-public class TestService<T> {
+public class TestService {
 
 	@Autowired
-	private List<T> list;
+	private List<Object> list;
 
 	public void test() {
 		System.out.println(list);

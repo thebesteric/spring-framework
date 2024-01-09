@@ -216,13 +216,13 @@ public abstract class AopUtils {
 	public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasIntroductions) {
 		Assert.notNull(pc, "Pointcut must not be null");
 
-		// 首先看类是否匹配（初筛）
+		// ⭐️ 首先看类是否匹配（初筛）
 		// 如果是事务：永远返回 true
 		if (!pc.getClassFilter().matches(targetClass)) {
 			return false;
 		}
 
-		// 再看方法是否匹配（精筛）
+		// ⭐️ 再看方法是否匹配（精筛）
 		MethodMatcher methodMatcher = pc.getMethodMatcher();
 		// 看看是否全匹配
 		if (methodMatcher == MethodMatcher.TRUE) {
@@ -255,7 +255,7 @@ public abstract class AopUtils {
 				if (introductionAwareMethodMatcher != null ?
 						// 利用切点表达式进行匹配 AspectJ 的方式
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
-						// ★★★ 通过方法匹配器进行匹配，内置 aop 接口方式
+						// ⭐️ 通过方法匹配器进行匹配，内置 aop 接口方式
 						methodMatcher.matches(method, targetClass)) {
 					// 只要有一个方法匹配上了，就创建代理
 					return true;
@@ -295,7 +295,7 @@ public abstract class AopUtils {
 		else if (advisor instanceof PointcutAdvisor) {
 			// 转换为 PointcutAdvisor
 			PointcutAdvisor pca = (PointcutAdvisor) advisor;
-			// 找到真正能用的增强器
+			// ⭐️ 找到真正能用的增强器
 			return canApply(pca.getPointcut(), targetClass, hasIntroductions);
 		}
 		else {
@@ -321,7 +321,7 @@ public abstract class AopUtils {
 		List<Advisor> eligibleAdvisors = new ArrayList<>();
 		// 循环我们候选的增强器对象
 		for (Advisor candidate : candidateAdvisors) {
-			// 判断我们的增强器对象是不是实现了 IntroductionAdvisor（动态引入时才会有）
+			// （可以忽略）判断我们的增强器对象是不是实现了 IntroductionAdvisor（动态引入时才会有）并且可以被应用
 			if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
 				eligibleAdvisors.add(candidate);
 			}
@@ -337,7 +337,7 @@ public abstract class AopUtils {
 				// 直接跳过
 				continue;
 			}
-			// ★★★ canApply：判断我们的事务增强器是不是合适的
+			// ⭐️ canApply：判断我们的事务增强器是不是合适的
 			if (canApply(candidate, clazz, hasIntroductions)) {
 				eligibleAdvisors.add(candidate);
 			}
@@ -361,7 +361,7 @@ public abstract class AopUtils {
 		// Use reflection to invoke the method.
 		try {
 			ReflectionUtils.makeAccessible(method);
-			// ★★★ 执行目标对象的方法
+			// ⭐️ 执行目标对象的方法
 			return method.invoke(target, args);
 		}
 		catch (InvocationTargetException ex) {

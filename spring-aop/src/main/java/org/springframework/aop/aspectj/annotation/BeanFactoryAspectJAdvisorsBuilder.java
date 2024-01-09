@@ -80,6 +80,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	 * @see #isEligibleBean
 	 */
 	public List<Advisor> buildAspectJAdvisors() {
+		// aspectBeanNames 是用来缓存 beanFactory 中所有的切面 beanName 的
 		List<String> aspectNames = this.aspectBeanNames;
 
 		if (aspectNames == null) {
@@ -88,11 +89,11 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
-					// 拿到 BeanFactory 中所有的 beanName
+					// ⭐️ 拿到 BeanFactory 中所有的 beanName
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
-						// 是不是一个合格的 bean
+						// 🧩 扩展方法：是不是一个合格的 bean，默认返回 true
 						if (!isEligibleBean(beanName)) {
 							continue;
 						}
@@ -103,17 +104,17 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
-						// beanType 是不是一个切面，也就是有没有 @Aspect 注解
+						// ⭐️ beanType 是不是一个切面，也就是有没有 @Aspect 注解
 						if (this.advisorFactory.isAspect(beanType)) {
 							// 是切面类，则加入到缓存中
 							aspectNames.add(beanName);
-
+							// 解析切面的注解信息
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
-								// 通过 beanName 生成一个工厂
+								// 通过 beanName 生成一个切面解析工厂
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
-								// ★★★ 解析 Advisor，也就是解析 @Before、@After、@Around 这些注解
+								// ⭐️ 解析 Advisor，也就是解析 @Before、@After、@Around 这些注解
 								// 每一个 @Before、@After、@Around 都会封装成要给 Advisor
 								// 也就是说一个 Advisor 包括一个 advise 和一个 pointcut
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);

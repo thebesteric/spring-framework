@@ -70,13 +70,13 @@ class ComponentScanAnnotationParser {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
-		// 设置 beanName 生成器
+		// ⭐️ 设置 beanName 生成器
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
 				BeanUtils.instantiateClass(generatorClass));
 
-		// 解析 @Scope 的 proxyMode 属性，该属性可以将 bean 设置为 JDK 代理或者 CGLIB 代理
+		// ⭐️ 解析 @Scope 的 proxyMode 属性，该属性可以将 bean 设置为 JDK 代理或者 CGLIB 代理
 		ScopedProxyMode scopedProxyMode = componentScan.getEnum("scopedProxy");
 		if (scopedProxyMode != ScopedProxyMode.DEFAULT) {
 			scanner.setScopedProxyMode(scopedProxyMode);
@@ -88,27 +88,27 @@ class ComponentScanAnnotationParser {
 
 		scanner.setResourcePattern(componentScan.getString("resourcePattern"));
 
-		// 设置 ComponentScan 对象的 includeFilters 包含的属性
+		// ⭐️ 设置 ComponentScan 对象的 includeFilters 包含的属性
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("includeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addIncludeFilter(typeFilter);
 			}
 		}
 
-		// 设置 ComponentScan 对象的 excludeFilters 包含的属性
+		// ⭐️ 设置 ComponentScan 对象的 excludeFilters 包含的属性
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("excludeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addExcludeFilter(typeFilter);
 			}
 		}
 
-		// 是否启用懒加载，也就是在第一次 getBean 的时候才会被加载到容器
+		// ⭐️ 是否启用懒加载，也就是在第一次 getBean 的时候才会被加载到容器
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
 
-		// 解析 basePackages 属性
+		// ⭐️ 解析 basePackages 属性
 		Set<String> basePackages = new LinkedHashSet<>();
 		String[] basePackagesArray = componentScan.getStringArray("basePackages");
 		for (String pkg : basePackagesArray) {
@@ -123,7 +123,7 @@ class ComponentScanAnnotationParser {
 			basePackages.add(ClassUtils.getPackageName(declaringClass));
 		}
 
-		// 增加一个默认的排除
+		// ⭐️ 增加一个默认的排除
 		scanner.addExcludeFilter(new AbstractTypeHierarchyTraversingFilter(false, false) {
 			@Override
 			protected boolean matchClassName(String className) {
