@@ -133,7 +133,7 @@ public interface TransactionDefinition {
 	 * nested transactions as well.
 	 * @see org.springframework.jdbc.datasource.DataSourceTransactionManager
 	 */
-	// 会设置一个 savepoint
+	// ⭐️ 会设置一个 savepoint
 	int PROPAGATION_NESTED = 6;
 
 

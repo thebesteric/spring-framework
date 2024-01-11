@@ -75,6 +75,7 @@ public class App {
 
 			// 部分失败时是否全局回滚，如果设置 false 的话，则不会
 			// 如果有 tryCatch 则还是会全部提交，否则全部回滚
+			// 如果设置为 false 的话，那么如果第二个方法中的 sql 执行失败，那么所有的 sql 还是会插入到数据库中
 			// dataSourceTransactionManager.setGlobalRollbackOnParticipationFailure(true);
 
 			return dataSourceTransactionManager;

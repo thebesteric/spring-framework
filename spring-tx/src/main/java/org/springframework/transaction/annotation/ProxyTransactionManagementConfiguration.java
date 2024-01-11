@@ -39,7 +39,7 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class ProxyTransactionManagementConfiguration extends AbstractTransactionManagementConfiguration {
 
-	// advisor
+	// ⭐️ 添加一个 Advisor
 	@Bean(name = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME)
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public BeanFactoryTransactionAttributeSourceAdvisor transactionAdvisor(
@@ -60,15 +60,16 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 		return advisor;
 	}
 
-	// 提供 @Transactional 注解的信息
+	// ⭐️ 提供一个对象 AnnotationTransactionAttributeSource，用来解析 @Transactional 注解的信息
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public TransactionAttributeSource transactionAttributeSource() {
-		// 用于解析 @Transactional 注解的信息
+		// AnnotationTransactionAttributeSource 定义了一个 Pointcut
+		// AnnotationTransactionAttributeSource 同时也可以解析 @Transactional 注解的信息
 		return new AnnotationTransactionAttributeSource();
 	}
 
-	// advice
+	// ⭐️ 提供 Advice，也就是代理逻辑（获取连接、提交、回归）
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public TransactionInterceptor transactionInterceptor(TransactionAttributeSource transactionAttributeSource) {

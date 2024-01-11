@@ -183,7 +183,7 @@ public abstract class DataSourceUtils {
 				if (debugEnabled) {
 					logger.debug("Setting JDBC Connection [" + con + "] read-only");
 				}
-				// 设置否是只读
+				// ⭐️ 设置否是只读
 				con.setReadOnly(true);
 			}
 			catch (SQLException | RuntimeException ex) {
@@ -208,9 +208,11 @@ public abstract class DataSourceUtils {
 						definition.getIsolationLevel());
 			}
 			int currentIsolation = con.getTransactionIsolation();
+			// 数据库的隔离级别是否与 @Transactional 设置的隔离级别一致
 			if (currentIsolation != definition.getIsolationLevel()) {
+				// 记录数据库的隔离级别
 				previousIsolationLevel = currentIsolation;
-				// 设置隔离级别
+				// ⭐️ 设置为 @Transactional 的隔离级别
 				con.setTransactionIsolation(definition.getIsolationLevel());
 			}
 		}

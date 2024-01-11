@@ -141,7 +141,7 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 	public boolean isCandidateClass(Class<?> targetClass) {
 		// this.annotationParsers 包括 SpringTransactionAnnotationParser，JtaTransactionAnnotationParser，Ejb3TransactionAnnotationParser
 		for (TransactionAnnotationParser parser : this.annotationParsers) {
-			// 通过 SpringTransactionAnnotationParser 类判断是否有 @Transactional 注解
+			// ⭐️ 通过 SpringTransactionAnnotationParser 类判断是否有 @Transactional 注解
 			if (parser.isCandidateClass(targetClass)) {
 				return true;
 			}
@@ -175,7 +175,7 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 	protected TransactionAttribute determineTransactionAttribute(AnnotatedElement element) {
 		// this.annotationParsers = [SpringTransactionAnnotationParser，JtaTransactionAnnotationParser，Ejb3TransactionAnnotationParser]
 		for (TransactionAnnotationParser parser : this.annotationParsers) {
-			// 通过 SpringTransactionAnnotationParser 找到 @Transactional 注解的信息
+			// ⭐️ 通过 SpringTransactionAnnotationParser 找到 @Transactional 注解的信息
 			// 并封装为 RuleBasedTransactionAttribute 这个对象
 			TransactionAttribute attr = parser.parseTransactionAnnotation(element);
 			if (attr != null) {

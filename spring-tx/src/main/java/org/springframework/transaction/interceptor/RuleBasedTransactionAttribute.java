@@ -135,8 +135,9 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 		RollbackRuleAttribute winner = null;
 		int deepest = Integer.MAX_VALUE;
 
-		// 取 @Transactional(rollbackFor = Exception.class) 的 rollbackFor 属性
-		// 这里会遍历所定义的异常的子类
+		// ⭐️ 取 @Transactional(rollbackFor = {Exception.class}) 的 rollbackFor 属性，并判断异常是否匹配
+		// 我们通过 rollbackFor 或 noRollbackFor 定义的异常，都分别会包装成 RollbackRuleAttribute 或 NoRollbackRuleAttribute
+		// 这里会遍历所定义的异常，判断抛出的异常是否匹配 RollbackRuleAttribute 中指定的异常类型的子类或本身
 		if (this.rollbackRules != null) {
 			for (RollbackRuleAttribute rule : this.rollbackRules) {
 				int depth = rule.getDepth(ex);
@@ -154,10 +155,12 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 		// User superclass behavior (rollback on unchecked) if no rule matches.
 		if (winner == null) {
 			logger.trace("No relevant rollback rule found: applying default rules");
-			// 如果没有设置 rollbackFor 属性，则直接调用父类的 rollbackOn
+			// ⭐️ 如果没有设置 rollbackFor 属性，则直接调用父类的 rollbackOn
+			// 那么就是 RuntimeException 或者 Error
 			return super.rollbackOn(ex);
 		}
-		// 如果匹配的类型是 NoRollbackRuleAttribute 则不回滚
+		// ⭐️ 如果匹配的类型是 NoRollbackRuleAttribute 则不回滚
+		// 匹配的类型可能是 RollbackRuleAttribute，也可能是 NoRollbackRuleAttribute
 		return !(winner instanceof NoRollbackRuleAttribute);
 	}
 

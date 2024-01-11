@@ -16,15 +16,14 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.config.AopConfigUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
+
+import java.util.Set;
 
 /**
  * Registers an auto proxy creator against the current {@link BeanDefinitionRegistry}
@@ -71,8 +70,8 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 					Boolean.class == proxyTargetClass.getClass()) {
 				candidateFound = true;
 				if (mode == AdviceMode.PROXY) {
-					// ★★★ 注册一个 InfrastructureAdvisorAutoProxyCreator 类型的 bean，用于处理事务
-					// 其实就是一个自动代理的创建器 AbstractAdvisorAutoProxyCreator
+					// ⭐️ 注册一个 InfrastructureAdvisorAutoProxyCreator 类型的 bean，用于处理事务
+					// 其实就是一个自动代理的创建器 AbstractAdvisorAutoProxyCreator，用于发现 Advisor 接口的 bean
 					AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
 					if ((Boolean) proxyTargetClass) {
 						AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);

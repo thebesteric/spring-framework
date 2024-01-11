@@ -121,13 +121,15 @@ public abstract class AbstractFallbackTransactionAttributeSource
 		}
 		else {
 			// We need to work it out.
-			// ★★★ 获取 @Transactional 注解的信息
+			// ⭐️ 获取 @Transactional 注解的信息（类或方法）
 			TransactionAttribute txAttr = computeTransactionAttribute(method, targetClass);
 			// Put it in the cache.
+			// 🏷️ 不需要事务
 			if (txAttr == null) {
 				// 加入缓存，标记为不需要事务
 				this.attributeCache.put(cacheKey, NULL_TRANSACTION_ATTRIBUTE);
 			}
+			// 🏷️ 需要事务
 			else {
 				// 获取方法身份，后面会作为事务名称
 				String methodIdentification = ClassUtils.getQualifiedMethodName(method, targetClass);
@@ -169,7 +171,7 @@ public abstract class AbstractFallbackTransactionAttributeSource
 	@Nullable
 	protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
 		// Don't allow no-public methods as required.
-		// ★ allowPublicMethodsOnly 默认为 true，表示只允许 public 方法使用事务，所以非 public 方法不生效的原因在这里体现的
+		// ⭐️ allowPublicMethodsOnly 默认为 true，表示只允许 public 方法使用事务，所以非 public 方法不生效的原因在这里体现的
 		if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {
 			return null;
 		}
@@ -179,15 +181,15 @@ public abstract class AbstractFallbackTransactionAttributeSource
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
 
 		// First try is the method in the target class.
-		// 第一步：根据具体的方法进行解析（父类的方法，接口的方法）
-		// 获取方法上的 @Transactional 注解的信息
+		// ⭐️ 第一步（方法解析）：根据具体的方法进行解析（父类的方法，接口的方法）
+		// 获取方法上的 @Transactional 注解的信息，并封装为 RuleBasedTransactionAttribute
 		TransactionAttribute txAttr = findTransactionAttribute(specificMethod);
 		if (txAttr != null) {
 			return txAttr;
 		}
 
 		// Second try is the transaction attribute on the target class.
-		// 第二步：根据实现类进行解析（父类，接口）
+		// ⭐️ 第二步（类解析）：根据实现类进行解析（父类，接口）
 		// 获取类上的 @Transactional 注解的信息
 		txAttr = findTransactionAttribute(specificMethod.getDeclaringClass());
 		if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {

@@ -133,7 +133,7 @@ public abstract class TransactionSynchronizationManager {
 		// actualKey 就是 Datasource
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
 		// resource 是一个 ThreadLocal，表示线程中缓存的的某个 datasource 对应的数据库连接
-		// 从 resource 中获取蘑菇额数据库的连接
+		// ⭐️ 从 resource 中获取蘑菇额数据库的连接
 		Object value = doGetResource(actualKey);
 		if (value != null && logger.isTraceEnabled()) {
 			logger.trace("Retrieved value [" + value + "] for key [" + actualKey + "] bound to thread [" +
@@ -175,12 +175,14 @@ public abstract class TransactionSynchronizationManager {
 	public static void bindResource(Object key, Object value) throws IllegalStateException {
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
 		Assert.notNull(value, "Value must not be null");
+		// ⭐️ resources 就是 ThreadLocal<Map<Object, Object>>
 		Map<Object, Object> map = resources.get();
 		// set ThreadLocal Map if none found
 		if (map == null) {
 			map = new HashMap<>();
 			resources.set(map);
 		}
+		// ⭐️ 加入到 ThreadLocal<Map<Object, Object>> 中
 		Object oldValue = map.put(actualKey, value);
 		// Transparently suppress a ResourceHolder that was marked as void...
 		if (oldValue instanceof ResourceHolder && ((ResourceHolder) oldValue).isVoid()) {

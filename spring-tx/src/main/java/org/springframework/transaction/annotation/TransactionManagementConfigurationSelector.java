@@ -48,12 +48,13 @@ public class TransactionManagementConfigurationSelector extends AdviceModeImport
 		switch (adviceMode) {
 			// 默认 mode = AdviceMode.PROXY
 			case PROXY:
-				// ★★★ 向 Spring 中添加了 AutoProxyRegistrar 和 ProxyTransactionManagementConfiguration 两个 bean
-				// - AutoProxyRegistrar：其实就是添加了一个 AbstractAdvisorAutoProxyCreator 自动代理创建器，是一个 BeanPostProcessor
-				// - ProxyTransactionManagementConfiguration：其实就是代理逻辑，在 spring 容器中加入了 3 个 bean
+				// ⭐️ 向 Spring 中添加了 AutoProxyRegistrar 和 ProxyTransactionManagementConfiguration 两个 bean
+				// 🏷️ AutoProxyRegistrar：其实就是添加了一个 AbstractAdvisorAutoProxyCreator 自动代理创建器，是一个 BeanPostProcessor，用于发现实现了 Advisor 接口的 bean
+				// 🏷️ ProxyTransactionManagementConfiguration：其实就是代理逻辑，在 spring 容器中加入了 3 个 bean
 				return new String[] {AutoProxyRegistrar.class.getName(),
 						ProxyTransactionManagementConfiguration.class.getName()};
 			case ASPECTJ:
+				// 不用动态代理技术，使用 AspectJ 技术
 				return new String[] {determineTransactionAspectClass()};
 			default:
 				return null;
