@@ -473,7 +473,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	@Override
 	protected void onRefresh(ApplicationContext context) {
-		// ★★★ 初始化九大组件
+		// ⭐️ 初始化九大组件
 		initStrategies(context);
 	}
 
@@ -485,10 +485,12 @@ public class DispatcherServlet extends FrameworkServlet {
 		initMultipartResolver(context);
 		initLocaleResolver(context);
 		initThemeResolver(context);
-		// 初始化 HandlerMapping，处理器映射器，Map<URL, 映射器>
+
+		// ⭐️ 初始化 HandlerMapping，处理器映射器，Map<URL, 映射器>
 		initHandlerMappings(context);
-		// 初始化 HandlerAdapter，处理器适配器，Map<映射器, 适配器>
+		// ⭐️ 初始化 HandlerAdapter，处理器适配器，Map<映射器, 适配器>
 		initHandlerAdapters(context);
+
 		initHandlerExceptionResolvers(context);
 		initRequestToViewNameTranslator(context);
 		initViewResolvers(context);
@@ -577,12 +579,12 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initHandlerMappings(ApplicationContext context) {
 		this.handlerMappings = null;
 
-		// 是否检测容器中所有的 HandlerMappings
+		// ⭐️ 是否检测容器中所有的 HandlerMappings，默认为 true
 		if (this.detectAllHandlerMappings) {
 			// Find all HandlerMappings in the ApplicationContext, including ancestor contexts.
-			// 先去容器中查找
-			// 此时容器中是可以找到的
-			// 因为 @EnableWebMvc 会 @Import(DelegatingWebMvcConfiguration.class)
+			// ⭐️ 去容器中查找 HandlerMapping 类型的所有 bean 对象
+			// 🧩 这里可以扩展自定义的 HandlerMapping 对象，只要定义 HandlerMapping 的 bean 对象即可
+			// 此时容器中是可以找到的，因为 @EnableWebMvc 会 @Import(DelegatingWebMvcConfiguration.class)
 			// 而 DelegatingWebMvcConfiguration.class 继承了 WebMvcConfigurationSupport，完成了 HandlerMapping 的注册
 			Map<String, HandlerMapping> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
@@ -592,6 +594,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				AnnotationAwareOrderComparator.sort(this.handlerMappings);
 			}
 		}
+		// ⭐️ 如果 detectAllHandlerMappings 为 false，则根据名字去找到一个唯一的
 		else {
 			try {
 				HandlerMapping hm = context.getBean(HANDLER_MAPPING_BEAN_NAME, HandlerMapping.class);
@@ -604,9 +607,9 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		// Ensure we have at least one HandlerMapping, by registering
 		// a default HandlerMapping if no other mappings are found.
-		// 如果容器中没有找到，中从 DispatcherServlet.properties 配置文件中找
+		// ⭐️ 如果容器中没有找到，则去 DispatcherServlet.properties 配置文件中，去拿默认的 HandlerMapping
 		if (this.handlerMappings == null) {
-			// 去 DispatcherServlet.properties 配置文件中找
+			// ⭐️ 去 DispatcherServlet.properties 配置文件中找
 			this.handlerMappings = getDefaultStrategies(context, HandlerMapping.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No HandlerMappings declared for servlet '" + getServletName() +
@@ -632,6 +635,7 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		if (this.detectAllHandlerAdapters) {
 			// Find all HandlerAdapters in the ApplicationContext, including ancestor contexts.
+			// ⭐️ 去容器中查找 HandlerAdapter 类型的所有 bean 对象
 			Map<String, HandlerAdapter> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerAdapter.class, true, false);
 			if (!matchingBeans.isEmpty()) {
@@ -861,7 +865,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				// Load default strategy implementations from properties file.
 				// This is currently strictly internal and not meant to be customized
 				// by application developers.
-				// 去 DispatcherServlet.properties 找
+				// ⭐️ 去 DispatcherServlet.properties 找
 				ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
 				defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
 			}
@@ -870,7 +874,11 @@ public class DispatcherServlet extends FrameworkServlet {
 			}
 		}
 
+		// key 为 org.springframework.web.servlet.HandlerMapping
 		String key = strategyInterface.getName();
+		// value 为：org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping,\
+		// 	org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping,\
+		// 	org.springframework.web.servlet.function.support.RouterFunctionMapping
 		String value = defaultStrategies.getProperty(key);
 		if (value != null) {
 			String[] classNames = StringUtils.commaDelimitedListToStringArray(value);
@@ -878,6 +886,9 @@ public class DispatcherServlet extends FrameworkServlet {
 			for (String className : classNames) {
 				try {
 					Class<?> clazz = ClassUtils.forName(className, DispatcherServlet.class.getClassLoader());
+					// ⭐️ 创建 bean 对象
+					// 📖 如：RequestMappingHandlerMapping 这个对象实现了 InitializingBean 接口，所以在 bean 的生命周期中会调用其 afterPropertiesSet 方法
+					// RequestMappingHandlerMapping 的 afterPropertiesSet 就完从了寻找 @RequestMapping 注解的逻辑
 					Object strategy = createDefaultStrategy(context, clazz);
 					strategies.add((T) strategy);
 				}
@@ -960,7 +971,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 
 		try {
-			// ★★★ 核心处理流程
+			// ⭐️ 核心处理流程
 			doDispatch(request, response);
 		}
 		finally {
@@ -1043,19 +1054,26 @@ public class DispatcherServlet extends FrameworkServlet {
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
-				// 1、处理器映射器：HandlerMapping
-				// ★★★ 推断使用哪一个 MappingHandler，返回一个处理器执行链（HandlerExecutionChain）
+				// =====================================
+				// ⭐️ 1、处理器映射器：HandlerMapping
+				// =====================================
+				// 根据 path 推断使用哪一个 MappingHandler，返回一个处理器执行链（HandlerExecutionChain）
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
+					// 都没有找到，则返回 404
 					noHandlerFound(processedRequest, response);
 					return;
 				}
 
 				// Determine handler adapter for the current request.
-				// ★★★ 获取处理器适配器
-				// 2、处理器适配器：HandlerAdapter，看哪一个 HandlerAdapter 可以适配该 handler
-				// Handler implement Controller		SimpleControllerHandlerAdapter
-				// @Controller						RequestMappingHandlerAdapter
+				// =====================================
+				// ⭐️ 2、获取处理器适配器
+				// =====================================
+				// 处理器适配器：HandlerAdapter，看哪一个 HandlerAdapter 可以适配该 handler
+				// 🏷️ 如果 handler 是 @RequestMapping 注解的某个方法，那么对应的是：RequestMappingHandlerAdapter
+				// 🏷️ 如果 handler 是 HttpRequestHandler 接口的对象，那么对应的是：HttpRequestHandlerAdapter
+				// 🏷️ 如果 handler 是 Controller 接口的对象，那么对应的是：SimpleControllerHandlerAdapter
+				// 🏷️ 如果 handler 是 HandlerFunction 对象，那么对应的是：HandlerFunctionAdapter
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
 				// Process last-modified header, if supported by the handler.
@@ -1069,24 +1087,26 @@ public class DispatcherServlet extends FrameworkServlet {
 					}
 				}
 
-				// ★★★ 拦截前（调用拦截器）
+				// ⭐️ 拦截前（调用拦截器）
 				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
 					return;
 				}
 
 				// Actually invoke the handler.
-				// 3、执行 handler 的方法
-				// ★★★ 执行处理器，调用 handler，封装参数、返回 ModelAndView，如果是 json 的话 mv 为 null
+				// =====================================
+				// ⭐️ 3、执行 handler 的方法
+				// =====================================
+				// 执行处理器，调用 handler，封装参数、返回 ModelAndView，如果是 json 的话 mv 为 null
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 				if (asyncManager.isConcurrentHandlingStarted()) {
 					return;
 				}
 
-				// ★★★ 处理默认视图
+				// ⭐️ 处理默认视图
 				applyDefaultViewName(processedRequest, mv);
 
-				// ★★★ 拦截后（调用拦截器）
+				// ⭐️ 拦截后（调用拦截器）
 				mappedHandler.applyPostHandle(processedRequest, response, mv);
 			}
 			catch (Exception ex) {
@@ -1098,7 +1118,9 @@ public class DispatcherServlet extends FrameworkServlet {
 				dispatchException = new NestedServletException("Handler dispatch failed", err);
 			}
 
-			// ★★★ 4-5、解析视图、渲染视图
+			// =====================================
+			// ⭐️ 4-5、解析视图、渲染视图
+			// =====================================
 			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 		}
 		catch (Exception ex) {
@@ -1223,6 +1245,7 @@ public class DispatcherServlet extends FrameworkServlet {
 			}
 			else {
 				try {
+					// 解析文件
 					return this.multipartResolver.resolveMultipart(request);
 				}
 				catch (MultipartException ex) {
@@ -1277,7 +1300,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	@Nullable
 	protected HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
-		// 获取所有的 handlerMappings（容器启动阶段初始化，拿到所有实现 HandlerMapping 接口的 bean）
+		// ⭐️ 获取所有的 handlerMappings（容器启动阶段初始化，拿到所有实现 HandlerMapping 接口的 bean）
 		// 如：RequestMappingHandlerMapping 是处理 @RequestMapping 注解的处理器映射器
 		if (this.handlerMappings != null) {
 			for (HandlerMapping mapping : this.handlerMappings) {
@@ -1316,6 +1339,10 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * @throws ServletException if no HandlerAdapter can be found for the handler. This is a fatal error.
 	 */
 	protected HandlerAdapter getHandlerAdapter(Object handler) throws ServletException {
+		// 🏷️ 如果 handler 是 @RequestMapping 注解的某个方法，那么对应的是：RequestMappingHandlerAdapter
+		// 🏷️ 如果 handler 是 HttpRequestHandler 接口的对象，那么对应的是：HttpRequestHandlerAdapter
+		// 🏷️ 如果 handler 是 Controller 接口的对象，那么对应的是：SimpleControllerHandlerAdapter
+		// 🏷️ 如果 handler 是 HandlerFunction 对象，那么对应的是：HandlerFunctionAdapter
 		if (this.handlerAdapters != null) {
 			for (HandlerAdapter adapter : this.handlerAdapters) {
 				if (adapter.supports(handler)) {

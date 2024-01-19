@@ -201,7 +201,7 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 			this.config.setRegisteredSuffixPatternMatch(useRegisteredSuffixPatternMatch());
 			this.config.setPathMatcher(getPathMatcher());
 		}
-		// 调用父类的方法
+		// ⭐️ 调用父类的方法，完成对 @RequestMapping 注解的扫描
 		super.afterPropertiesSet();
 	}
 
@@ -268,13 +268,13 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	@Override
 	@Nullable
 	protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
-		// 将方法上的 @RequestMapping 注解解析成 RequestMappingInfo
+		// ⭐️ 将方法上的 @RequestMapping 注解解析成 RequestMappingInfo
 		RequestMappingInfo info = createRequestMappingInfo(method);
 		if (info != null) {
-			// 将类上的 @RequestMapping 注解解析成 RequestMappingInfo
+			// ⭐️ 将类上的 @RequestMapping 注解解析成 RequestMappingInfo
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
 			if (typeInfo != null) {
-				// 合并注解
+				// ⭐️ 合并注解
 				info = typeInfo.combine(info);
 			}
 			String prefix = getPathPrefix(handlerType);
@@ -308,9 +308,12 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	 */
 	@Nullable
 	private RequestMappingInfo createRequestMappingInfo(AnnotatedElement element) {
+		// ⭐️ 获取 @RequestMapping 注解
 		RequestMapping requestMapping = AnnotatedElementUtils.findMergedAnnotation(element, RequestMapping.class);
+		// ⭐️ 扩展方法，如果有：该条件会在请求时匹配
 		RequestCondition<?> condition = (element instanceof Class ?
 				getCustomTypeCondition((Class<?>) element) : getCustomMethodCondition((Method) element));
+		// ⭐️ 如果有 @RequestMapping 注解，则封装为 RequestMappingInfo 对象返回
 		return (requestMapping != null ? createRequestMappingInfo(requestMapping, condition) : null);
 	}
 

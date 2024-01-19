@@ -102,7 +102,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 	public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
 
-		// ★★★ 调用目标方法，封装参数、并拿到返回值
+		// ⭐️ 调用目标方法，包括：解析参数、并拿到返回值
 		Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);
 
 		// 设置相关返回状态
@@ -123,7 +123,11 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 		mavContainer.setRequestHandled(false);
 		Assert.state(this.returnValueHandlers != null, "No return value handlers");
 		try {
-			// 遍历返回值解析器 returnValueHandlers，看看哪一个支持解析该返回值
+			// ⭐️ 处理返回值：遍历返回值解析器 returnValueHandlers，看看哪一个支持解析该返回值
+			// 🏷️ 如果返回值是 Map 类型，那就用 MapMethodProcessor 处理
+			// 🏷️ 如果返回值是 ModelAndView 类型，那就用 ModelAndViewMethodReturnValueHandler 处理
+			// 🏷️⭐️ 如果返回值有 @ResponseBody 注解，那就用 RequestResponseBodyMethodProcessor 处理
+			// 🏷️⭐️ 如果返回值是 String 类型，那就要用 ViewNameMethodReturnValueHandler 处理
 			this.returnValueHandlers.handleReturnValue(
 					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
 		}

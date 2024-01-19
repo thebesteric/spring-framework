@@ -208,6 +208,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	private boolean enableLoggingRequestDetails = false;
 
 	/** WebApplicationContext for this servlet. */
+	// ⭐️ Spring 容器
 	@Nullable
 	private WebApplicationContext webApplicationContext;
 
@@ -521,8 +522,9 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		long startTime = System.currentTimeMillis();
 
 		try {
-			// 初始化 web 容器，完成了父子容器的设置
+			// ⭐️ 初始化 web 容器，完成了父子容器的设置
 			this.webApplicationContext = initWebApplicationContext();
+			// 空方法，无实现
 			initFrameworkServlet();
 		}
 		catch (ServletException | RuntimeException ex) {
@@ -586,19 +588,24 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			// has been registered in the servlet context. If one exists, it is assumed
 			// that the parent context (if any) has already been set and that the
 			// user has performed any initialization such as setting the context id
+			// 从 servlet 上下文根据 contextAttribute 名字从域中获取
 			wac = findWebApplicationContext();
 		}
 		if (wac == null) {
 			// No context instance is defined for this servlet -> create a local one
+			// ⭐️ XML 定义的，会在这里创建容器。并注册一个 ContextRefreshListener 监听器，来监听 ContextRefreshedEvent 事件
+			// 通过 ContextRefreshListener 监听器里接收到 ContextRefreshedEvent 事件时，初始化组件
 			wac = createWebApplicationContext(rootContext);
 		}
 
+		// 这里是一个兜底操作，通常会在创建容器时注册一个 ContextRefreshListener 监听器，来监听 ContextRefreshedEvent 事件
+		// 在这个接受到这个事件时会调用 onRefresh 来初始化组件
 		if (!this.refreshEventReceived) {
 			// Either the context is not a ConfigurableApplicationContext with refresh
 			// support or the context injected at construction time had already been
 			// refreshed -> trigger initial onRefresh manually here.
 			synchronized (this.onRefreshMonitor) {
-				// ★★★ 初始化 9 大组件
+				// ⭐️ 初始化 9 大组件
 				onRefresh(wac);
 			}
 		}
@@ -652,6 +659,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext
 	 */
 	protected WebApplicationContext createWebApplicationContext(@Nullable ApplicationContext parent) {
+		// ⭐️ contextClass = XmlWebApplicationContext.class
 		Class<?> contextClass = getContextClass();
 		if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
 			throw new ApplicationContextException(
@@ -659,15 +667,21 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 					"': custom WebApplicationContext class [" + contextClass.getName() +
 					"] is not of type ConfigurableWebApplicationContext");
 		}
+		// ⭐️ 创建 XmlWebApplicationContext 的对象
 		ConfigurableWebApplicationContext wac =
 				(ConfigurableWebApplicationContext) BeanUtils.instantiateClass(contextClass);
 
+		// 设置环境变量
 		wac.setEnvironment(getEnvironment());
 		wac.setParent(parent);
+		// ⭐️ 获取 /WEB-INF/spring.xml 的配置文件，通常会配置一个扫描路径
+		// ⌨️ <context:component-scan base-package="xxx.xxx.xxx" />
 		String configLocation = getContextConfigLocation();
 		if (configLocation != null) {
 			wac.setConfigLocation(configLocation);
 		}
+		// ⭐️ 启动 Spring 容器，解析 spring.xml，扫描 base-package
+		// ⭐️ 同时会注册一个 ContextRefreshListener 监听器，来监听 ContextRefreshedEvent 事件，表示容器刷新完成
 		configureAndRefreshWebApplicationContext(wac);
 
 		return wac;
@@ -691,7 +705,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		wac.setServletContext(getServletContext());
 		wac.setServletConfig(getServletConfig());
 		wac.setNamespace(getNamespace());
-		// 设置监听器，监听 ContextRefreshedEvent 事件，调用 onRefresh 方法，初始化 Spring MVC 的九大组件
+		// ⭐️ 设置监听器，监听 ContextRefreshedEvent 事件，调用 onRefresh 方法，初始化 Spring MVC 的九大组件
 		wac.addApplicationListener(new SourceFilteringListener(wac, new ContextRefreshListener()));
 
 		// The wac environment's #initPropertySources will be called in any case when the context
@@ -701,10 +715,11 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		if (env instanceof ConfigurableWebEnvironment) {
 			((ConfigurableWebEnvironment) env).initPropertySources(getServletContext(), getServletConfig());
 		}
-
+		// 空方法、可扩展
 		postProcessWebApplicationContext(wac);
+		// 容器启动前初始化
 		applyInitializers(wac);
-		// 刷新容器
+		// ⭐️ 刷新容器
 		wac.refresh();
 	}
 
@@ -843,9 +858,10 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 * @param event the incoming ApplicationContext event
 	 */
 	public void onApplicationEvent(ContextRefreshedEvent event) {
-		// 表示已经刷新过了
+		// ⭐️ 表示容器已经完成刷新了
 		this.refreshEventReceived = true;
 		synchronized (this.onRefreshMonitor) {
+			// ⭐️ 初始化九大组件
 			onRefresh(event.getApplicationContext());
 		}
 	}
@@ -1010,7 +1026,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		initContextHolders(request, localeContext, requestAttributes);
 
 		try {
-			// ★★★ 调用 DispatcherServlet 的 doService
+			// ⭐️ 调用 DispatcherServlet 的 doService
 			doService(request, response);
 		}
 		catch (ServletException | IOException ex) {

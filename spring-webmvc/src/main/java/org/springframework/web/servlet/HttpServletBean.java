@@ -142,7 +142,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 	public final void init() throws ServletException {
 
 		// Set bean properties from init parameters.
-		// 解析 init-param 并封装为 PropertyValues（XML）
+		// ⭐️ 解析 init-param 并封装为 PropertyValues（XML）
 		PropertyValues pvs = new ServletConfigPropertyValues(getServletConfig(), this.requiredProperties);
 		if (!pvs.isEmpty()) {
 			try {
@@ -161,6 +161,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 		}
 
 		// Let subclasses do whatever initialization they like.
+		// ⭐️ 初始化 Servlet 并创建 Spring 容器
 		initServletBean();
 	}
 

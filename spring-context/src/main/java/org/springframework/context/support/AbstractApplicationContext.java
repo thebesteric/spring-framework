@@ -609,6 +609,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Last step: publish corresponding event.
 				// 执行容器的生命周期：SmartLifecycle 的 start 方法，同时将 this.running 的值设置为 true，表示容器已经开始运行
 				// ⭐️ 发布了一个事件：ContextRefreshedEvent，表示容器已经刷新完成
+				// 🧩 Spring MVC 会注意一个监听器，监听 ContextRefreshedEvent 事件
 				finishRefresh();
 			}
 

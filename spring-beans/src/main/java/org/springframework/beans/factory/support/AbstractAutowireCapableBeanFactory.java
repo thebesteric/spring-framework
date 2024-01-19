@@ -1927,7 +1927,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
-		// ⭐ 执行初始化方法
+		// ⭐ 执行初始化方法，调用实现了 InitializingBean 接口的 bean 的 afterPropertiesSet 方法，完成初始化
+		// 📖 Spring MVC 的 RequestMappingHandlerMapping 就利用 afterPropertiesSet 方法完成了寻找 @RequestMapping 注解的逻辑
 		try {
 			invokeInitMethods(beanName, wrappedBean, mbd);
 		}
@@ -1999,6 +2000,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 			else {
 				// ⭐️ 如果实现了 InitializingBean 就会调用 afterPropertiesSet 方法
+				// 📖 如：RequestMappingHandlerMapping 这个对象实现了 InitializingBean 接口，所以在 bean 的生命周期中会调用其 afterPropertiesSet 方法
+				// RequestMappingHandlerMapping 的 afterPropertiesSet 就完从了寻找 @RequestMapping 注解的逻辑
 				((InitializingBean) bean).afterPropertiesSet();
 			}
 		}

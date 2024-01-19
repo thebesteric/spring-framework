@@ -533,14 +533,17 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 		// Do this first, it may add ResponseBody advice beans
 		initControllerAdviceCache();
 
+		// ⭐️ 参数解析器
 		if (this.argumentResolvers == null) {
 			List<HandlerMethodArgumentResolver> resolvers = getDefaultArgumentResolvers();
 			this.argumentResolvers = new HandlerMethodArgumentResolverComposite().addResolvers(resolvers);
 		}
+		// ⭐️ 数据帮顶起的解析器
 		if (this.initBinderArgumentResolvers == null) {
 			List<HandlerMethodArgumentResolver> resolvers = getDefaultInitBinderArgumentResolvers();
 			this.initBinderArgumentResolvers = new HandlerMethodArgumentResolverComposite().addResolvers(resolvers);
 		}
+		// ⭐️ 返回值处理器
 		if (this.returnValueHandlers == null) {
 			List<HandlerMethodReturnValueHandler> handlers = getDefaultReturnValueHandlers();
 			this.returnValueHandlers = new HandlerMethodReturnValueHandlerComposite().addHandlers(handlers);
@@ -648,6 +651,7 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 		// Catch-all
 		resolvers.add(new PrincipalMethodArgumentResolver());
 		resolvers.add(new RequestParamMethodArgumentResolver(getBeanFactory(), true));
+		// ⭐️ 可以解析对象
 		resolvers.add(new ServletModelAttributeMethodProcessor(true));
 
 		return resolvers;
@@ -773,10 +777,13 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 		}
 		else {
 			// No synchronization on session demanded at all...
+			// ⭐️ 执行方法，得到 ModelAndView 对象
 			mav = invokeHandlerMethod(request, response, handlerMethod);
 		}
 
+		// 响应头中是否有 Cache-Control，如果没有则按 Spring MVC 中的配置来设置
 		if (!response.containsHeader(HEADER_CACHE_CONTROL)) {
+			// 如果用了 @SessionAttributes，则把 Spring MVC 中设置的 cacheSeconds 设置给 Cache-Control
 			if (getSessionAttributesHandler(handlerMethod).hasSessionAttributes()) {
 				applyCacheSeconds(response, this.cacheSecondsForSessionAttributeHandlers);
 			}
@@ -823,7 +830,7 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 		ServletWebRequest webRequest = new ServletWebRequest(request, response);
 
 		try {
-			// 获取容器中配置的 InitBinder 和当前的 HandlerMethod 所对应的 Controller 中配置的 InitBinder，用于进行参数的绑定
+			// 获取容器中配置的 @InitBinder 方法和当前的 HandlerMethod 所对应的 Controller 中配置的 InitBinder，用于进行参数的绑定
 			WebDataBinderFactory binderFactory = getDataBinderFactory(handlerMethod);
 
 			// 获取容器中全局配置的 ModelAttribute 和当前的 handlerMethod 所对应的 Controller 的参数
@@ -873,8 +880,10 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 				});
 				invocableMethod = invocableMethod.wrapConcurrentResult(result);
 			}
-			// ★★★ 执行 handler（包括参数解析，获取返回值）
+
+			// ⭐️ 执行 handler（包括参数解析，获取返回值）
 			invocableMethod.invokeAndHandle(webRequest, mavContainer);
+
 			if (asyncManager.isConcurrentHandlingStarted()) {
 				return null;
 			}
