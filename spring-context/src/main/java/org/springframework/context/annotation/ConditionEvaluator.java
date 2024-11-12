@@ -80,6 +80,7 @@ class ConditionEvaluator {
 	public boolean shouldSkip(@Nullable AnnotatedTypeMetadata metadata, @Nullable ConfigurationPhase phase) {
 		// 没有条件注解
 		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
+			// 表示不需要跳过
 			return false;
 		}
 
@@ -106,6 +107,7 @@ class ConditionEvaluator {
 			if (condition instanceof ConfigurationCondition) {
 				requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
 			}
+			// ⭐️ 调用 Condition 的 matches 方法
 			if ((requiredPhase == null || requiredPhase == phase) && !condition.matches(this.context, metadata)) {
 				return true;
 			}

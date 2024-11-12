@@ -311,7 +311,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		}
 		else {
 			// ⭐️ 扫描候选 Component
-			// 此时返回的 BeanDefinition 中，只有 beanClass、resource 和 source 有值
+			// 此时返回的 BeanDefinition 类型是：ScannedGenericBeanDefinition，其中只有 beanClass、resource 和 source 有值
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -509,7 +509,8 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			}
 		}
 		// ⭐️ 包含的
-		// includeFilters 会默认包含一个含有 @Component 注解的过滤器
+		// 在构建 scanner 的时候，会给 includeFilters 添加 @Component 注解的过滤器
+		// 所以 includeFilters 会默认包含一个含有 @Component 注解的过滤器
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				// ⭐️ 是否有 @Conditional 条件注解
@@ -544,8 +545,8 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
 		// 不是抽象类，如果是抽象类那么抽象类上必须有 @Lookup 注解
-		// metadata.isIndependent()：是否是一个顶级类、或者是静态内部类（有效的）
-		// metadata.isConcrete()：非接口，非抽象类
+		// metadata.isIndependent()：是否是一个顶级类、或者是静态内部类（有效的），因为非静态的内部类是无法单独实例化的
+		// metadata.isConcrete()：是否是具体的一个类：非接口，非抽象类
 		// metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName())：如果是抽象类，那么必须要有 @Lookup 注解的方法
 		// @Lookup 可以结合抽象类一起用，保证原型
 		return (metadata.isIndependent() && (metadata.isConcrete() ||

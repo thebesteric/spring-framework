@@ -160,7 +160,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		this.registry = registry;
 
 		if (useDefaultFilters) {
-			// ⭐️ 注册默认过滤器
+			// ⭐️ 注册默认 include 过滤器，就是包含 @Component 注解
 			registerDefaultFilters();
 		}
 		// 设置环境对象
@@ -251,7 +251,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	public int scan(String... basePackages) {
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
-		// ⭐️核心逻辑：开始扫描
+		// ⭐️核心逻辑：开始扫描，并将扫描到的类转换为 BD，注册到 beanDefinitionMap 中
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
@@ -277,7 +277,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		// 循环包路径
 		for (String basePackage : basePackages) {
 
-			// ⭐️ 找到候选的 Components（开始扫描）
+			// ⭐️ 找到候选的 Components，也就是得到 BD（开始扫描）
+			// 此时返回的 BeanDefinition 类型是：ScannedGenericBeanDefinition，其中只有 beanClass、resource 和 source 有值
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 
 			for (BeanDefinition candidate : candidates) {
@@ -289,11 +290,14 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				// 其他情况返回首字母小写
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 
-				// ⭐️ 设置默认的一些 bean 定义，如 lazy，autowired-model，init-method，destroy-method
+				// ⭐️ 设置默认的一些 bean 定义
+				// 会设置如下属性： lazy = null，autowired-model = AUTOWIRE_NO，init-method = null，destroy-method = null
+				// ScannedGenericBeanDefinition 继承了 GenericBeanDefinition 实现了 AnnotatedBeanDefinition
+				// GenericBeanDefinition 实现了 AbstractBeanDefinition
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
-				// 设置 @Lazy，@Primary，@DependsOn、@Role、@Description 等属性
+				// 获取 @Lazy，@Primary，@DependsOn、@Role、@Description 等属性，设置到 BD 中
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
@@ -307,6 +311,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
 					// ⭐️ 注册到容器 beanDefinitionMap 中
+					// 到这里表示没有同名的 BD，但是不会管类型是否相同，所以会产生类型覆盖到问题
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -365,7 +370,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		}
 		// 是否兼容，如果兼容返回 false，但是也不会注册到 spring 容器中
 		// 这种情况突然发生在对同一个路径下扫描了多次
-		// eg.
+		// eg. 通过手动注册了两次配置类，且配置类的配置的扫描路径都相同，那么当注册 AppConfig2.class 的时候，虽然会扫描，但是不会注册到 beanDefinitionMap 中
 		// ctx.register(AppConfig1.class)
 		// ctx.register(AppConfig2.class)
 		if (isCompatible(beanDefinition, existingDef)) {

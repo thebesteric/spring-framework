@@ -896,7 +896,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
-		// 从容器中获取所有 beanDefinition 的名称，这些名字都是通过 scan 加入进来的
+		// 从容器中获取所有 beanDefinition 的名称，这些名字都是通过 ClassPathBeanDefinitionScanner 的 scan 方法加入进来的
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
@@ -907,9 +907,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 
 			// beanDefinition 不能是抽象的，必须是单例与非懒加载的
+			// bd.isAbstract()，并不是抽象类的概念，指的指抽象 BD
 			// 抽象的 BD，通常在 xml 中配置，可用于其他 BD 的继承，如果子 BD 有同名属性，则不覆盖
-			// <bean id="prototypeBD" scope="prototype" abstract="true" />
-			// <bean id="userService" class="xx.xx.UserService", parent="prototypeBD" />
+			// <bean id="abstractPrototypeBD" scope="prototype" abstract="true" />
+			// <bean id="userService" class="xx.xx.UserService", parent="abstractPrototypeBD" />
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
 
 				// 是不是工厂 bean
@@ -1030,7 +1031,6 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
 				synchronized (this.beanDefinitionMap) {
-					// ⭐️ 加入到 beanDefinitionMap 中
 					this.beanDefinitionMap.put(beanName, beanDefinition);
 					List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
 					updatedDefinitions.addAll(this.beanDefinitionNames);
@@ -1041,7 +1041,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 			else {
 				// Still in startup registration phase
+				// ⭐️ 加入到 beanDefinitionMap 中
 				this.beanDefinitionMap.put(beanName, beanDefinition);
+				// 同时给 beanDefinitionNames 赋值
 				this.beanDefinitionNames.add(beanName);
 				removeManualSingletonName(beanName);
 			}

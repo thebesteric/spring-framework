@@ -45,10 +45,12 @@ public class SimulateAnnotationConfigApplicationContext {
 	public Object getBean(String beanName) {
 		Object bean;
 		if (!beanDefinitionMap.containsKey(beanName)) {
-			throw new RuntimeException("no such bean exception: " + beanName);
+			throw new RuntimeException("No such bean exception: " + beanName);
 		}
 		BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
 		if ("singleton".equals(beanDefinition.getScope())) {
+			// 先从单例池尝试获取，没有再创建，防止加载顺序先后问题
+			// 比如：userService 里面有个属性是 orderService，此时 orderService 还没有创建，会提前创建，并缓存起来，保证后续都是同一个 orderService
 			bean = singletonObjects.get(beanName);
 			if (bean == null) {
 				bean = createBean(beanName, beanDefinition);
@@ -81,8 +83,10 @@ public class SimulateAnnotationConfigApplicationContext {
 			for (Field field : clazz.getDeclaredFields()) {
 				if (field.isAnnotationPresent(Autowired.class)) {
 					field.setAccessible(true);
+					// 优先按类型查找，先 byTpe 如果存在多个，再 byName，如果还是多个，抛出异常
 					String fieldName = field.getName();
-					field.set(instance, getBean(fieldName));
+					// 这里就会出现循环依赖的问题，暂不讨论
+					field.set(instance, this.getBean(fieldName));
 				}
 			}
 
@@ -141,16 +145,19 @@ public class SimulateAnnotationConfigApplicationContext {
 		if (configClass.isAnnotationPresent(ComponentScan.class)) {
 			ComponentScan componentScanAnnotation = configClass.getAnnotation(ComponentScan.class);
 			// com.sourceflag.spring.simulate.app
-			String path = componentScanAnnotation.value();
+			String path = configClass.getPackage().getName();
+			if (componentScanAnnotation != null && !"".equals(componentScanAnnotation.value())) {
+				path = componentScanAnnotation.value();
+			}
 			// com/sourceflag/spring/simulate/app
 			path = path.replace(".", "/");
 
 			ClassLoader appClassLoader = SimulateAnnotationConfigApplicationContext.class.getClassLoader();
 			URL resource = appClassLoader.getResource(path);
 			assert resource != null;
-			File file = new File(resource.getFile());
+			File directory = new File(resource.getFile());
 
-			doScan(path, appClassLoader, file);
+			doScan(path, appClassLoader, directory);
 
 		}
 	}
@@ -163,11 +170,13 @@ public class SimulateAnnotationConfigApplicationContext {
 					String newPath = f.getAbsolutePath().substring(f.getAbsolutePath().indexOf(path));
 					doScan(newPath, classLoader, f);
 				} else {
-					// /Users/keisun/IdeaProjects/research/source/spring/spring-framework-5.3.2/spring-case/build/classes/java/main/com/sourceflag/spring/simulate/app/service/UserService.class
+					// /Users/wangweijun/IdeaProjects/spring-framework/spring-case/build/classes/java/main/com/sourceflag/spring/simulate/app/processor/SimulateBeanPostProcessor.class
 					String absolutePath = f.getAbsolutePath();
 					int start = absolutePath.indexOf(path);
 					int end = absolutePath.indexOf(".class");
+					// com/sourceflag/spring/simulate/app/processor/SimulateBeanPostProcessor
 					absolutePath = absolutePath.substring(start, end);
+					// com.sourceflag.spring.simulate.app.processor.SimulateBeanPostProcessor
 					String className = absolutePath.replace("/", ".");
 					try {
 						Class<?> clazz = classLoader.loadClass(className);
@@ -212,6 +221,7 @@ public class SimulateAnnotationConfigApplicationContext {
 		String beanName = componentAnnotation.value();
 		if (beanName.isEmpty()) {
 			// beanName = toLowercaseFirstLetter(clazz.getSimpleName());
+			// 参考：org.springframework.context.annotation.AnnotationBeanNameGenerator.buildDefaultBeanName(org.springframework.beans.factory.config.BeanDefinition)
 			beanName = Introspector.decapitalize(clazz.getSimpleName());
 		}
 		return beanName;

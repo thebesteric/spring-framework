@@ -557,7 +557,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 
 				// Invoke factory processors registered as beans in the context.
-				// ⭐️ 这一步主要就是完成扫描，找到所有的 BD，并加入到 beanDefinitionMap 中
+				// ⭐️ 这一步主要就是完成扫描，调用 scanner 的 scan 方法，找到所有的 BD，并加入到 beanDefinitionMap 中
 				// ⭐️ 同时执行 BeanDefinitionRegistryPostProcessor 和 BeanFactoryPostProcessors 两个接口
 				// 此时 beanDefinitionMap 中至少有 6 个 BD（5 个基础 BD，和 1 个 AppConfig）
 				// 而这 6 个 BD 中，只有一个 BeanFactoryPostProcessor 就是 ConfigurationClassPostProcessor
@@ -602,8 +602,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
-				// ⭐️ IoC 的体现：开始实例化所有 非懒加载的单例 类，走了 validate 和 life 生命周期的两个步骤
-				// 这行代码执行完毕后，完成了非懒加载的单例 bean 实例化，singletonObjects 里面就会有实例化好的对象实例
+				// ⭐️ IoC 的体现：开始实例化所有【非懒加载的单例 Bean】，走了 validate 和 life 生命周期的两个步骤
+				// 这行代码执行完毕后，完成了非懒加载的单例 Bean 实例化，singletonObjects 里面就会有实例化好的对象实例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -1021,7 +1021,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
-		// ⭐️ 实例化非懒加载的单例 bean
+		// ⭐️ 实例化【非懒加载的单例 bean】
 		beanFactory.preInstantiateSingletons();
 	}
 

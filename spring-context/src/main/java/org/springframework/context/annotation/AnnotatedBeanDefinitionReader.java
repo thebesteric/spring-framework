@@ -258,6 +258,7 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 			@Nullable BeanDefinitionCustomizer[] customizers) {
 
+		// 反射获取 AnnotationMetadata 封装到 AnnotatedGenericBeanDefinition 中
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
 		// 查找是否有 @Conditional 注解，来决定是否忽略
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {

@@ -2,10 +2,7 @@ package com.sourceflag.spring.constructor;
 
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.*;
 
 // @Component
 @ComponentScan("com.sourceflag.spring.constructor")
@@ -30,9 +27,8 @@ public class App {
 		ctx.refresh();
 
 		ctx.getBean(TestService.class);
-		ctx.getBean(TestService.class);
 
-		ctx.getBean(UserService.class);
+		// ctx.getBean(UserService.class);
 	}
 
 	// public static class InnerClass {

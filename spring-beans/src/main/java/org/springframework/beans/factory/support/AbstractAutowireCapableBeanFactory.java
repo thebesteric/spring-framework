@@ -507,7 +507,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// ⭐️ 【2、实例化】关键代码：开始创建 bean
+			// ⭐️ 【2、实例化】关键代码：开始创建 bean；包含【第二次～第八次调用后置处理器】
 			// 包括【推断构造方法】，【属性填充】，【初始化】等
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 
@@ -560,7 +560,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// 得到原始对象 bean
+		// 此时的 bean 是纯净的 bean
 		Object bean = instanceWrapper.getWrappedInstance();
+
 		Class<?> beanType = instanceWrapper.getWrappedClass();
 		if (beanType != NullBean.class) {
 			mbd.resolvedTargetType = beanType;
@@ -599,7 +601,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// ⭐️ 关键代码：【第四次调用后置处理器】，为工厂服务，并判断是否需要 AOP，如果不需要 AOP 就返回原始对象 bean
+			// ⭐️ 关键代码：【第四次】调用后置处理器，为工厂服务，并判断是否需要 AOP，如果不需要 AOP 就返回原始对象 bean
 			// 提前把这个 bean 的 ObjectFactory 放入三级缓存 singletonFactories 中，并从二级缓存删除 bean
 			// 这也是循环依赖的重点，提前暴露一个对象工厂，这个对象工厂可以生成完整的 bean 对象
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
@@ -1923,7 +1925,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// ⭐ 初始化前：@PostConstruct 就是在这里调用的
 		if (mbd == null || !mbd.isSynthetic()) {
-			// 调用 beanPostProcess 初始化前 postProcessBeforeInitialization 方法
+			// 【第七次】调用 beanPostProcess 初始化前 postProcessBeforeInitialization 方法
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1940,7 +1942,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// ⭐ 初始化后：AOP，事务在此处执行
 		if (mbd == null || !mbd.isSynthetic()) {
-			// 调用 beanPostProcess 初始化后 postProcessAfterInitialization 方法
+			// 【第八次】调用 beanPostProcess 初始化后 postProcessAfterInitialization 方法
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
