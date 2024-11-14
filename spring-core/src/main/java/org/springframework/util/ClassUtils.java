@@ -271,6 +271,8 @@ public abstract class ClassUtils {
 			clToUse = getDefaultClassLoader();
 		}
 		try {
+			// ⭐️ 反射获取 Class 对象
+			// initialize 为 false，表示不执行静态代码块，此时静态代码块会在静态类首次被访问的时候执行
 			return Class.forName(name, false, clToUse);
 		}
 		catch (ClassNotFoundException ex) {

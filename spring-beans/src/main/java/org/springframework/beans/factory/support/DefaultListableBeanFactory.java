@@ -903,7 +903,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// 循环所有非懒加载的单例 bean
 		for (String beanName : beanNames) {
 
-			// 合并后的 beanDefinition，用于父子 bean 的关系
+			// ⭐️ 合并后的 beanDefinition，用于父子 bean 的关系
+			// 此时的 BD 属性是最完整的，并且存放在 mergedBeanDefinitions 中
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 
 			// beanDefinition 不能是抽象的，必须是单例与非懒加载的
@@ -913,7 +914,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			// <bean id="userService" class="xx.xx.UserService", parent="abstractPrototypeBD" />
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
 
-				// 是不是工厂 bean
+				// 是工厂 bean
 				if (isFactoryBean(beanName)) {
 					// 如果是工厂 bean，则加 & 前缀，获取的时 FactoryBean 的对象
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
@@ -937,7 +938,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						}
 					}
 				}
-				// 非工厂 bean
+				// 不是工厂 bean，即：非懒加载的单例 bean
 				else {
 					// ⭐️ 开始实例化 bean
 					getBean(beanName);

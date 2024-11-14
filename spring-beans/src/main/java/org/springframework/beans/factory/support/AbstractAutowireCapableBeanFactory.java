@@ -467,9 +467,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Make sure bean class is actually resolved at this point, and
 		// clone the bean definition in case of a dynamically resolved Class
 		// which cannot be stored in the shared merged bean definition.
-		// ⭐️ beanClassName 转化为 beenClass，并使 BD 中的 beanClass 属性也已经变更为 Class 对象
+		// ⭐️ 将 beanClassName 转化为 beenClass，并使 BD 中的 beanClass 属性变更为 Class 对象
 		Class<?> resolvedClass = resolveBeanClass(mbd, beanName);
 		if (resolvedClass != null && !mbd.hasBeanClass() && mbd.getBeanClassName() != null) {
+			// 创建了一个新的 RootBeanDefinition 对象，原因是不破坏 mergedBeanDefinitions 中的原始数据
 			mbdToUse = new RootBeanDefinition(mbd);
 			// ⭐️ 此时完成 String 类型的 className 替换为 Class 对象
 			mbdToUse.setBeanClass(resolvedClass);
@@ -1125,6 +1126,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected void applyMergedBeanDefinitionPostProcessors(RootBeanDefinition mbd, Class<?> beanType, String beanName) {
 		// 处理合并好的 BD 的 BPP
 		for (MergedBeanDefinitionPostProcessor processor : getBeanPostProcessorCache().mergedDefinition) {
+			//⭐️ AutowiredAnnotationBeanPostProcessor.postProcessMergedBeanDefinition：寻找 @Autowired 注入点
+			//⭐️ InitDestroyAnnotationBeanPostProcessor.postProcessMergedBeanDefinition: 寻找 @PostConstruct 和 @PreDestroy 注解
 			processor.postProcessMergedBeanDefinition(mbd, beanType, beanName);
 		}
 	}
@@ -1139,9 +1142,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	@Nullable
 	protected Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
 		Object bean = null;
+		// 该 BD 还没有被实例化前解析过
 		if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
 			// Make sure bean class is actually resolved at this point.
-			// ⭐️ 看是否有 InstantiationAwareBeanPostProcessor 接口的类
+			// ⭐️ 看是否有实现了 InstantiationAwareBeanPostProcessor 接口的类
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
@@ -1499,24 +1503,30 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		// ⭐️ 这里到 pvs 包含从 MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition 中添加的属性，应为在实例化和实例化后之间就执行了
+		// 程序员可以通过这个接口方法添加属性：如：mbd.getPropertyValues().add("orderService", new OrderService());
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
-		// 已经标记为过时的方法
+		// Spring 自带的属性注入方式：已经标记为过时的方法，可以不借助 @Autowired 注解实现注入，必须有 setter 方法
+		// 方式包含: Autowire.BY_TYPE 或 Autowire.BY_NAME
 		// 🖨️ <bean id="userService" class="xxx.UserService" autowire="byType" />
 		// 或
 		// 🖨️ @Bean(autowire = Autowire.BY_TYPE) 这种方式，模式 autowire 默认值为 Autowire.NO
-		// 只有 Autowire.BY_TYPE 或 Autowire.BY_NAME 才支持 setter 方法的注入
+		// 如：
 		// 🖨️ public void setOrderService(OrderService orderService) {...}
 		// Autowire.BY_TYPE：使用 setter 方法的参数类型
 		// Autowire.BY_NAME：使用 setter 方法去掉 set 前缀后的名称
+		// 默认情况下：resolvedAutowireMode = Autowire.NO
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
 			// Add property values based on autowire by name if applicable.
+			// Autowire.BY_NAME：使用 setter 方法去掉 set 前缀后的名称
 			if (resolvedAutowireMode == AUTOWIRE_BY_NAME) {
 				autowireByName(beanName, mbd, bw, newPvs);
 			}
 			// Add property values based on autowire by type if applicable.
+			// Autowire.BY_TYPE：使用 setter 方法的参数类型
 			if (resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 				autowireByType(beanName, mbd, bw, newPvs);
 			}
@@ -1530,7 +1540,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (hasInstAwareBpps) {
 			if (pvs == null) {
 				// 获取到 pvs
-				// ⭐️ 这里到 pvs 包含 MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition 中添加的属性，应为在实例化和实例化后之间就执行了
+				// ⭐️ 这里到 pvs 包含从 MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition 中添加的属性，应为在实例化和实例化后之间就执行了
+				// 程序员可以通过这个接口方法添加属性：如：mbd.getPropertyValues().add("orderService", new OrderService());
 				pvs = mbd.getPropertyValues();
 			}
 			// ⭐️ 【第六次】调用后置处理器：实例化后，处理了 @Autowired、@Resource 和 @Value 的属性注入
@@ -1926,6 +1937,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// ⭐ 初始化前：@PostConstruct 就是在这里调用的
 		if (mbd == null || !mbd.isSynthetic()) {
 			// 【第七次】调用 beanPostProcess 初始化前 postProcessBeforeInitialization 方法
+			// ⭐️ 执行 ApplicationContextAwareProcessor 的 postProcessBeforeInitialization 执行各种 invokeAwareInterfaces 方法
+			// ⭐️ 执行 InitDestroyAnnotationBeanPostProcessor 的 postProcessBeforeInitialization 执行 @PostConstruct 方法
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1943,6 +1956,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// ⭐ 初始化后：AOP，事务在此处执行
 		if (mbd == null || !mbd.isSynthetic()) {
 			// 【第八次】调用 beanPostProcess 初始化后 postProcessAfterInitialization 方法
+			// ⭐️ AOP：@EnableAspectJAutoProxy 为我们容器导入了 AnnotationAwareAspectJAutoProxyCreator 后置处理器
+			// ⭐️ 事务：@EnableTransactionManagement 为我们容器导入了 AspectJTransactionManagementConfiguration 后置处理器
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
@@ -1951,18 +1966,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	private void invokeAwareMethods(String beanName, Object bean) {
 		if (bean instanceof Aware) {
-			// 实现了 BeanNameAware
+			// ⭐️ 实现了 BeanNameAware
 			if (bean instanceof BeanNameAware) {
 				((BeanNameAware) bean).setBeanName(beanName);
 			}
-			// 实现了 BeanClassLoaderAware
+			// ⭐️ 实现了 BeanClassLoaderAware
 			if (bean instanceof BeanClassLoaderAware) {
 				ClassLoader bcl = getBeanClassLoader();
 				if (bcl != null) {
 					((BeanClassLoaderAware) bean).setBeanClassLoader(bcl);
 				}
 			}
-			// 实现了 BeanFactoryAware
+			// ⭐️ 实现了 BeanFactoryAware
 			if (bean instanceof BeanFactoryAware) {
 				((BeanFactoryAware) bean).setBeanFactory(AbstractAutowireCapableBeanFactory.this);
 			}
@@ -1983,7 +1998,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	protected void invokeInitMethods(String beanName, Object bean, @Nullable RootBeanDefinition mbd)
 			throws Throwable {
-		// 是否实现了 InitializingBean 接口
+		// 检查是否实现了 InitializingBean 接口
 		boolean isInitializingBean = (bean instanceof InitializingBean);
 		if (isInitializingBean && (mbd == null || !mbd.isExternallyManagedInitMethod("afterPropertiesSet"))) {
 			if (logger.isTraceEnabled()) {

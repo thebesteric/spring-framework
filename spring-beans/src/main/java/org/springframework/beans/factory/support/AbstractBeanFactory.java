@@ -213,6 +213,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// getSingleton() 中有一个参数：allowEarlyReference = true，是否应该创建早期引用，也是证明 spring 支持循环依赖的另一个证据
 		Object sharedInstance = getSingleton(beanName);
 
+		// ⭐️ 单例池存在，需要判断是不是 FactoryBean 的逻辑，不是，直接返回
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -224,7 +225,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 			// ⭐️ 判断拿到的对象是不是一个 FactoryBean
-			// 如果是一个 FactoryBean 的话，就会调用 getObject 方法
+			// 如果是一个 FactoryBean 的话，就会调用 getObject 方法，如果不是 FactoryBean 的话，就直接返回单例池获取到的对象
 			// name 是外部传入的名字，beanName 是通过单例池拿到的名字
 			beanInstance = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
@@ -277,7 +278,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 				// ⭐️ 得到合并后的 BeanDefinition
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
-				// bd 如果是抽象的直接抛异常
+				// BD 如果是抽象的直接抛异常
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
@@ -307,7 +308,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// Create bean instance.
 				// ⭐️ 检查完毕了所有的依赖关系，开始创建 bean，并加入单例池中
-				// ⭐️ 如果是 singleton
+				// ⭐️ 如果是单例 bean：singleton
 				if (mbd.isSingleton()) {
 					// 把 beanName 和一个 ObjectFactory 作为参数传入，用于回调
 					sharedInstance = getSingleton(beanName, () -> {
@@ -329,7 +330,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					// name 是外部传入的名字，beanName 是通过单例池拿到的名字
 					beanInstance = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
 				}
-				// ⭐️ 原型 bean
+				// ⭐️ 如果是原型 bean：prototype
 				else if (mbd.isPrototype()) {
 					// It's a prototype -> create a new instance.
 					Object prototypeInstance = null;
@@ -359,7 +360,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						throw new IllegalStateException("No Scope registered for scope name '" + scopeName + "'");
 					}
 					try {
-						// ⭐️ 利用 request 或 session 的 attributes 方法实现
+						// ⭐️ 利用 request 或 session 的 getAttributes 方法实现
 						// request.getAttribute(beanName)
 						// request.setAttribute(beanName, scopedInstance)
 						Object scopedInstance = scope.get(beanName, () -> {
@@ -396,6 +397,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@SuppressWarnings("unchecked")
 	<T> T adaptBeanInstance(String name, Object bean, @Nullable Class<?> requiredType) {
 		// Check if required type matches the type of the actual bean instance.
+		// 这种情况通常是通过：getBean(beanName, beanClass) 的方式获取 bean
 		// ⭐️ 如果 requiredType 不是当前 bean 的类型，则可能需要类型转化
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {
@@ -997,16 +999,19 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		if (bpCache == null) {
 			bpCache = new BeanPostProcessorCache();
 			for (BeanPostProcessor bp : this.beanPostProcessors) {
-				// 分别加入不通的 BPP 缓存中
+				// 加入 BPP 实例化缓存
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					bpCache.instantiationAware.add((InstantiationAwareBeanPostProcessor) bp);
+					// 加入 BPP 推断构造方法、AOP 缓存
 					if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 						bpCache.smartInstantiationAware.add((SmartInstantiationAwareBeanPostProcessor) bp);
 					}
 				}
+				// 加入 BPP 销毁缓存
 				if (bp instanceof DestructionAwareBeanPostProcessor) {
 					bpCache.destructionAware.add((DestructionAwareBeanPostProcessor) bp);
 				}
+				// 加入 BPP 合并 BD 缓存
 				if (bp instanceof MergedBeanDefinitionPostProcessor) {
 					bpCache.mergedDefinition.add((MergedBeanDefinitionPostProcessor) bp);
 				}
@@ -1364,6 +1369,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		if (mbd != null && !mbd.stale) {
 			return mbd;
 		}
+		// ⭐️ 开始合并
 		return getMergedBeanDefinition(beanName, getBeanDefinition(beanName));
 	}
 
@@ -1406,7 +1412,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			if (mbd == null || mbd.stale) {
 				previous = mbd;
-				// 没有父亲
+				// ⭐️ 当前的 BD 没有指定 parent
 				if (bd.getParentName() == null) {
 					// Use copy of given root bean definition.
 					if (bd instanceof RootBeanDefinition) {
@@ -1416,11 +1422,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						mbd = new RootBeanDefinition(bd);
 					}
 				}
-				// 有父亲
+				// 当前的 BD 指定了 parent
 				else {
 					// Child bean definition: needs to be merged with parent.
 					BeanDefinition pbd;
 					try {
+						// 获取 parent 的名字
 						String parentBeanName = transformedBeanName(bd.getParentName());
 						if (!beanName.equals(parentBeanName)) {
 							// 递归，看父节点有没有父节点，完成父节点的合并
@@ -1444,7 +1451,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 					// Deep copy with overridden values.
 					mbd = new RootBeanDefinition(pbd);
-					// 合并：进行覆盖操作
+					// 合并：进行覆盖操作，可以看出来是 BD 覆盖 MBD
 					mbd.overrideFrom(bd);
 				}
 
@@ -1464,6 +1471,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Cache the merged bean definition for the time being
 				// (it might still get re-merged later on in order to pick up metadata changes)
 				if (containingBd == null && isCacheBeanMetadata()) {
+					// ⭐️ 加入到合并后的 mergedBeanDefinitions 中
+					// 这个 map 中的 bean 的属性是最完整的，实例化就会根据 mergedBeanDefinitions 来获取 BD
 					this.mergedBeanDefinitions.put(beanName, mbd);
 				}
 			}
@@ -1500,7 +1509,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	protected void checkMergedBeanDefinition(RootBeanDefinition mbd, String beanName, @Nullable Object[] args)
 			throws BeanDefinitionStoreException {
-
+		// BD 如果是抽象的，直接报错，抽象的 BD 都是作为 parent 使用的
 		if (mbd.isAbstract()) {
 			throw new BeanIsAbstractException(beanName);
 		}
@@ -1550,7 +1559,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			throws CannotLoadBeanClassException {
 
 		try {
-			// ⭐️ 判断 beanClass 是否是 Class 类型
+			// ⭐️ 判断 beanClass 是否是 Class 类型：beanClass instanceof Class
 			// 第一次 beanClass 都是 ClassName 字符串的形式
 			if (mbd.hasBeanClass()) {
 				return mbd.getBeanClass();
@@ -1582,8 +1591,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 		// ⭐️ 获取类加载器
 		// 这里的 beanClassLoader 可以时通过：
-		// 1、ctx.getBeanFactory().setBeanClassLoader(xxx) 设置
-		// 2、Thread.currentThread().setContextClassLoader(xxx) 设置
+		// 1、Thread.currentThread().setContextClassLoader(xxx) 设置
+		// 2、ctx.getBeanFactory().setBeanClassLoader(xxx) 设置
 		// 3、兜底使用加载 ClassUtils 的类加载器，ApplicationClassLoader
 		ClassLoader beanClassLoader = getBeanClassLoader();
 		ClassLoader dynamicLoader = beanClassLoader;
@@ -1604,10 +1613,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 		}
+		// ⭐️ 开始解析 className 转换为 Class 对象
 		// 获取 className
 		String className = mbd.getBeanClassName();
 		if (className != null) {
 			// 解析 spring 表达式，有可能直接返回一个 class 对象
+			// 可能是：<bean id="userService" class="#{xxx}"/>，此时 class 对应的就是一个 SpEL 表达式
 			Object evaluated = evaluateBeanDefinitionString(className, mbd);
 			if (!className.equals(evaluated)) {
 				// A dynamically resolved expression, supported as of 4.2...
@@ -1642,7 +1653,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 
 		// Resolve regularly, caching the result in the BeanDefinition...
-		// className 转化为 class 对象
+		// ⭐️ className 转化为 class 对象：Class.forName(name, false, clToUse)
 		return mbd.resolveBeanClass(beanClassLoader);
 	}
 
@@ -1703,7 +1714,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param beanName the name of the bean
 	 * @param mbd the corresponding bean definition
 	 */
-	protected boolean isFactoryBean(String beanName, RootBeanDefinition mbd) {
+	protected boolean  isFactoryBean(String beanName, RootBeanDefinition mbd) {
 		Boolean result = mbd.isFactoryBean;
 		if (result == null) {
 			// 从 BD 中推测 bean 的类型（利用 beanClass 属性）
@@ -1919,15 +1930,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			return beanInstance;
 		}
 
-		// 走到这里表示，是一个 FactoryBean，并且需要调用 getObject 方法
+		// 走到这里表示，则一定是一个 FactoryBean，而且是期望返回 FactoryBean 中的 getObject 方法返回的对象
+		// 所以需要调用 FactoryBean 的 getObject 方法
 		Object object = null;
 		if (mbd != null) {
 			mbd.isFactoryBean = true;
 		}
 		else {
-			// ⭐ 从 factoryBeanObjectCache 缓存中直接获取
+			// ⭐ 尝试从 factoryBeanObjectCache 缓存中直接获取
 			object = getCachedObjectForFactoryBean(beanName);
 		}
+		// factoryBeanObjectCache 缓存不存在
 		if (object == null) {
 			// Return bean instance from factory.
 			FactoryBean<?> factory = (FactoryBean<?>) beanInstance;
@@ -1937,7 +1950,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 			// synthetic 为 true，则表示这个这个 bean 不是一个正常的 bean，可能只是起到辅助作用，所以这种 bean 就不需要执行 PostProcessor 了
 			boolean synthetic = (mbd != null && mbd.isSynthetic());
-			// ⭐️ 直接 FactoryBean 的 getObject 方法
+			// ⭐️ 直接调用 FactoryBean 的 getObject 方法
 			object = getObjectFromFactoryBean(factory, beanName, !synthetic);
 		}
 		return object;
@@ -2171,13 +2184,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	static class BeanPostProcessorCache {
 
-		// 实例化之前，实例化之后
+		// 负责：
+		// 1、实例化之前：postProcessBeforeInstantiation
+		// 5、实例化之后：postProcessAfterInstantiation
+		// 6、属性处理：postProcessProperties
 		final List<InstantiationAwareBeanPostProcessor> instantiationAware = new ArrayList<>();
 
+		// 负责：
+		// 2、实例化-推断构造方法：determineCandidateConstructors
+		// 4、判断是否需要 AOP：getEarlyBeanReference
 		final List<SmartInstantiationAwareBeanPostProcessor> smartInstantiationAware = new ArrayList<>();
 
 		final List<DestructionAwareBeanPostProcessor> destructionAware = new ArrayList<>();
 
+		// 负责：
+		// 3、合并BD：postProcessMergedBeanDefinition，即：查找 @Autowired 的注入点（InjectedElement），并把这些注入点添加到 mbd 的属性 Set<Member> externallyManagedConfigMembers 中
 		final List<MergedBeanDefinitionPostProcessor> mergedDefinition = new ArrayList<>();
 	}
 

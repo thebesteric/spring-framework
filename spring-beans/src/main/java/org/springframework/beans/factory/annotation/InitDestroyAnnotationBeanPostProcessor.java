@@ -92,7 +92,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	protected transient Log logger = LogFactory.getLog(getClass());
 
-	// 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
+	// ⭐️ 是由 InitDestroyAnnotationBeanPostProcessor 的子类 CommonAnnotationBeanPostProcessor 在构造方式中赋值的
 	// ⭐️ initAnnotationType = @PostConstruct
 	@Nullable
 	private Class<? extends Annotation> initAnnotationType;
@@ -173,7 +173,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 	public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
-			// 执行销毁方法
+			// ⭐️ 执行销毁方法：@PreDestroy
 			metadata.invokeDestroyMethods(bean, beanName);
 		}
 		catch (InvocationTargetException ex) {
@@ -362,6 +362,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 					if (logger.isTraceEnabled()) {
 						logger.trace("Invoking destroy method on bean '" + beanName + "': " + element.getMethod());
 					}
+					// 执行 @PreDestroy 注解的方法
 					element.invoke(target);
 				}
 			}

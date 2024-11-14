@@ -123,7 +123,9 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 							}
 						}
 						if (containsSingleton(beanName)) {
-							// 加入 factoryBeanObjectCache 缓存
+							// ⭐️ 加入 factoryBeanObjectCache 缓存
+							// 也就是 FactoryBean 的 getObject 方法返回的对象，都会存在 factoryBeanObjectCache 中
+							// 而不是 singletonObjects 中
 							this.factoryBeanObjectCache.put(beanName, object);
 						}
 					}
