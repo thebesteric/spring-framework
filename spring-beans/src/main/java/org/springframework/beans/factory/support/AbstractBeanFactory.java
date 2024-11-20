@@ -292,7 +292,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
-						// dep 被 beanName 所依赖，则需要将 beanName 存入 dependentBeanMap 中
+						// dep 被 beanName 所依赖（或者说创建 beanName 这个 bean，需要先创建 dep），则需要将 beanName 存入 dependentBeanMap 中
 						// dependentBeanMap 的 key = dep, value = beanName
 						registerDependentBean(dep, beanName);
 						try {
@@ -539,17 +539,18 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 如果 name 为 &xxx，则解析为：xxx
 		String beanName = transformedBeanName(name);
 		// name 是不是 &xxx，如果是，则表示没有解引用（需要获取原生的 FactoryBean）
+		// isFactoryDereference：表示是不是要获取原生的 FactoryBean，即 name 是 &xxx
 		boolean isFactoryDereference = BeanFactoryUtils.isFactoryDereference(name);
 
 		// Check manually registered singletons.
-		// 根据名字，从单例池获取 bean
+		// ⭐️ 根据名字，从单例池获取 bean
 		Object beanInstance = getSingleton(beanName, false);
 		if (beanInstance != null && beanInstance.getClass() != NullBean.class) {
 			// 如果是一个 FactoryBean
 			if (beanInstance instanceof FactoryBean) {
 				// name 为 xxx：表示要获取一个 FactoryBean 中的 getObject 类型的 bean
 				if (!isFactoryDereference) {
-					// 调用 factoryBean.getObjectType() 获取类型
+					// ⭐️ 调用 factoryBean.getObjectType() 获取类型
 					// 所以 FactoryBean 有一个 getObjectType 方法指定类型的原因就是，不想过早实例化
 					Class<?> type = getTypeForFactoryBean((FactoryBean<?>) beanInstance);
 					return (type != null && typeToMatch.isAssignableFrom(type));
@@ -595,7 +596,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			return false;
 		}
 
+		// 走到这里表示从单例池没有获取到 bean 对象
+
 		// No singleton instance found -> check bean definition.
+		// 尝试调用父工厂
 		BeanFactory parentBeanFactory = getParentBeanFactory();
 		if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 			// No bean definition found in this factory -> delegate to parent.
@@ -1706,6 +1710,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		if (mbd.getFactoryMethodName() != null) {
 			return null;
 		}
+		// 解析 beanClass
 		return resolveBeanClass(mbd, beanName, typesToMatch);
 	}
 
@@ -1979,10 +1984,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected boolean requiresDestruction(Object bean, RootBeanDefinition mbd) {
 		// 1. 是否实现了 DisposableBean 或 AutoCloseable 接口
 		// 2. 是否在 BD 中指定了销毁方法
-		// 3. 是否实现了 DestructionAwareBeanPostProcessor 且 requiresDestruction 返回了 true
+		// 3. 是否存在 DestructionAwareBeanPostProcessor 且 requiresDestruction 返回了 true
 		// 4. 是否定义了 @PreDestroy 注解的方法（InitDestroyAnnotationBeanPostProcessor 这个类就会去查找是否有 @PreDestroy 注解的方法）
 		// ⭐️ 注意：DestructionAwareBeanPostProcessor 有一个默认的实现类 InitDestroyAnnotationBeanPostProcessor
-		return (bean.getClass() != NullBean.class && (DisposableBeanAdapter.hasDestroyMethod(bean, mbd) ||
+		return (bean.getClass() != NullBean.class &&  (DisposableBeanAdapter.hasDestroyMethod(bean, mbd) ||
 				(hasDestructionAwareBeanPostProcessors() && DisposableBeanAdapter.hasApplicableProcessors(
 						bean, getBeanPostProcessorCache().destructionAware))));
 	}
@@ -2007,7 +2012,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Register a DisposableBean implementation that performs all destruction
 				// work for the given bean: DestructionAwareBeanPostProcessors,
 				// DisposableBean interface, custom destroy method.
-				// 存到 disposableBeans 缓存中，当销毁的时候会调用 DisposableBeanAdapter 的 destroy 方法
+				// ⭐️ 存到 disposableBeans 缓存中，当销毁的时候会调用 DisposableBeanAdapter 的 destroy 方法
 				registerDisposableBean(beanName, new DisposableBeanAdapter(
 						bean, beanName, mbd, getBeanPostProcessorCache().destructionAware, acc));
 			}
@@ -2184,20 +2189,22 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	static class BeanPostProcessorCache {
 
-		// 负责：
+		// 负责处理：
 		// 1、实例化之前：postProcessBeforeInstantiation
 		// 5、实例化之后：postProcessAfterInstantiation
 		// 6、属性处理：postProcessProperties
 		final List<InstantiationAwareBeanPostProcessor> instantiationAware = new ArrayList<>();
 
-		// 负责：
+		// 负责处理：
 		// 2、实例化-推断构造方法：determineCandidateConstructors
 		// 4、判断是否需要 AOP：getEarlyBeanReference
 		final List<SmartInstantiationAwareBeanPostProcessor> smartInstantiationAware = new ArrayList<>();
 
+		// 负责处理：
+		// 最后：requiresDestruction 会标记某个 bean 是否要被销毁
 		final List<DestructionAwareBeanPostProcessor> destructionAware = new ArrayList<>();
 
-		// 负责：
+		// 负责处理：
 		// 3、合并BD：postProcessMergedBeanDefinition，即：查找 @Autowired 的注入点（InjectedElement），并把这些注入点添加到 mbd 的属性 Set<Member> externallyManagedConfigMembers 中
 		final List<MergedBeanDefinitionPostProcessor> mergedDefinition = new ArrayList<>();
 	}

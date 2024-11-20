@@ -13,7 +13,7 @@ public class UserService {
 	private OrderService orderService;
 
 	public void test() {
-		System.out.println(orderService);
+		System.out.println(orderService.autowiredBy());
 	}
 
 	public void setOrderService(OrderService orderService) {

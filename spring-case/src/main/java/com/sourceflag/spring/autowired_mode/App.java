@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 2023-12-15 14:23:33
  */
 @Configuration
-@ComponentScan("com.sourceflag.spring.lookup")
+@ComponentScan("com.sourceflag.spring.autowired_mode")
 public class App {
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(App.class);

@@ -158,7 +158,7 @@ public abstract class AnnotationUtils {
 		if (annotationName.startsWith("java.")) {
 			return true;
 		}
-		// 如果 class 的类名是 java 开头的，就不是候选类
+		// 如果 class 的全限定名是 java. 开头的，就不是候选类
 		if (AnnotationsScanner.hasPlainJavaAnnotationsOnly(clazz)) {
 			return false;
 		}

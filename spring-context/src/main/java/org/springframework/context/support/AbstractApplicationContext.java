@@ -1098,10 +1098,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				@Override
 				public void run() {
 					synchronized (startupShutdownMonitor) {
+						// ctx.close() 其实也是调用了 doClose() 方法
 						doClose();
 					}
 				}
 			};
+			// 向 JVM 注册了一个关闭的钩子函数
 			Runtime.getRuntime().addShutdownHook(this.shutdownHook);
 		}
 	}
@@ -1184,7 +1186,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 
 			// Destroy all cached singletons in the context's BeanFactory.
-			// 销毁容器中所有的单例 bean
+			// ⭐️ 销毁容器中所有的单例 bean
 			destroyBeans();
 
 			// Close the state of this context itself.

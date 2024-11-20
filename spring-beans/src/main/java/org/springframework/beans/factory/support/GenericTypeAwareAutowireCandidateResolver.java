@@ -68,6 +68,8 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 			return false;
 		}
 		// ⭐️ 判断范型
+		// 案例：class GenericTypeService<A, B> 中含有两个范型注入点：@Autowired protected A a; 与 @Autowired protected B b;
+		// 使用场景：GenericTypeServiceImpl extends GenericTypeService<UserService, OrderService>
 		return checkGenericTypeMatch(bdHolder, descriptor);
 	}
 

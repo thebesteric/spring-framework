@@ -46,7 +46,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 	@Override
 	@Nullable
 	public Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, @Nullable String beanName) {
-		// isLazy(descriptor) 检查属性或方法参数是否有 @Lazy 注解
+		// isLazy(descriptor)：检查属性或方法参数是否有 @Lazy 注解
 		// 如果有：则构建该属性或方法参数的代理对象，并返回
 		return (isLazy(descriptor) ? buildLazyResolutionProxy(descriptor, beanName) : null);
 	}
@@ -77,6 +77,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 		BeanFactory beanFactory = getBeanFactory();
 		Assert.state(beanFactory instanceof DefaultListableBeanFactory,
 				"BeanFactory needs to be a DefaultListableBeanFactory");
+		// 获取到 bean 工厂
 		final DefaultListableBeanFactory dlbf = (DefaultListableBeanFactory) beanFactory;
 
 		TargetSource ts = new TargetSource() {
@@ -92,8 +93,12 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 			// ⭐️ 当调用代理对象（@Lazy 注解的对象）的某个方法的时候，会调用 getTarget 的方法，才开始真正的解析这个对象，然后在调用这个对象的方法
 			@Override
 			public Object getTarget() {
+				// 记录当前创建的 bean 所依赖的 autowiredBeanNames
+				// 为什么是一个 Set 集合？
+				// 如果是属性注入：那么该集合只有一个值
+				// 如果是方法参数注入：那么该集合就会存在多个值，因为方法注入支持多个参数
 				Set<String> autowiredBeanNames = (beanName != null ? new LinkedHashSet<>(1) : null);
-				// ⭐️ 完成依赖注入等动作，返回被代理对象
+				// ⭐️ doResolveDependency 会完成依赖注入等动作，返回被代理对象
 				Object target = dlbf.doResolveDependency(descriptor, beanName, autowiredBeanNames, null);
 				if (target == null) {
 					Class<?> type = getTargetClass();
@@ -110,6 +115,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 							"Optional dependency not present for lazy injection point");
 				}
 				if (autowiredBeanNames != null) {
+					// 记录依赖关系
 					for (String autowiredBeanName : autowiredBeanNames) {
 						if (dlbf.containsBean(autowiredBeanName)) {
 							dlbf.registerDependentBean(autowiredBeanName, beanName);
@@ -123,6 +129,7 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 			}
 		};
 
+		// 代理工厂
 		ProxyFactory pf = new ProxyFactory();
 		pf.setTargetSource(ts);
 		Class<?> dependencyType = descriptor.getDependencyType();

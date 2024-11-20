@@ -203,7 +203,6 @@ public class InitDestroyAnnotationBeanPostProcessor
 	private LifecycleMetadata findLifecycleMetadata(Class<?> clazz) {
 		if (this.lifecycleMetadataCache == null) {
 			// Happens after deserialization, during destruction...
-			// ⭐️ 找到 @PostConstruct 和 @PreDestroy 注解的方法
 			return buildLifecycleMetadata(clazz);
 		}
 		// Quick check on the concurrent map first, with minimal locking.
@@ -212,7 +211,9 @@ public class InitDestroyAnnotationBeanPostProcessor
 			synchronized (this.lifecycleMetadataCache) {
 				metadata = this.lifecycleMetadataCache.get(clazz);
 				if (metadata == null) {
+					// ⭐️ 根据 beanClass 找到 @PostConstruct 和 @PreDestroy 注解的方法
 					metadata = buildLifecycleMetadata(clazz);
+					// 加入缓存
 					this.lifecycleMetadataCache.put(clazz, metadata);
 				}
 				return metadata;
@@ -257,9 +258,9 @@ public class InitDestroyAnnotationBeanPostProcessor
 				}
 			});
 
-			// 加入初始化方法，index = 0 的作用是，初始化方法是先调用父类，在执行子类
+			// ⚠️ 加入初始化方法，index = 0 的作用是，初始化方法是先调用父类，在执行子类
 			initMethods.addAll(0, currInitMethods);
-			// 加入销毁方法，这里是往后添加，那么就是先执行子类的销毁，在执行父类的销毁
+			// ⚠️ 加入销毁方法，这里是往后添加，那么就是先执行子类的销毁，在执行父类的销毁
 			destroyMethods.addAll(currDestroyMethods);
 
 			// 找到父亲，看父类是否有初始化或销毁方法

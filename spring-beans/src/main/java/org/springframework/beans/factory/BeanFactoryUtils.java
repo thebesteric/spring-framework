@@ -262,6 +262,7 @@ public abstract class BeanFactoryUtils {
 
 		// ⭐️ 从本容器中查找，根据类型找到 beanNames
 		// includeNonSingletons 为 true，表示包含非单例 bean，即所有的 bean
+		// 实现类是：DefaultListableBeanFactory
 		String[] result = lbf.getBeanNamesForType(type, includeNonSingletons, allowEagerInit);
 
 		// 从父容器中查找

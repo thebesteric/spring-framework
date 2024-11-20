@@ -57,6 +57,8 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 						(PrivilegedAction<Class<?>>) factoryBean::getObjectType, getAccessControlContext());
 			}
 			else {
+				// ⭐️ 调用 FactoryBean 的 getObjectType 方法
+				// 这个方法的作用就是提前判断类型，而不是调用 getObject 方法，先生成对象，再利用对象判断类型，这样消耗太大
 				return factoryBean.getObjectType();
 			}
 		}

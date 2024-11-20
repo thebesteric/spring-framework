@@ -228,12 +228,16 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 
 	@Override
 	public void destroy() {
+		// 调用 @PreDestroy 注解的方法
 		if (!CollectionUtils.isEmpty(this.beanPostProcessors)) {
 			for (DestructionAwareBeanPostProcessor processor : this.beanPostProcessors) {
+				// 实现类：InitDestroyAnnotationBeanPostProcessor
+				// 从 lifecycleMetadataCache 中获取 LifecycleMetadata 执行 @PreDestroy 注解的方法
 				processor.postProcessBeforeDestruction(this.bean, this.beanName);
 			}
 		}
 
+		// ⭐️ 调用实现了 DisposableBean 接口的 destroy 方法
 		if (this.invokeDisposableBean) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Invoking destroy() on bean with name '" + this.beanName + "'");
@@ -246,6 +250,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 					}, this.acc);
 				}
 				else {
+					// 调用 DisposableBean 的 destory 方法
 					((DisposableBean) this.bean).destroy();
 				}
 			}
@@ -260,6 +265,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 			}
 		}
 
+		// ⭐️ 调用用户定义的销毁方法：bd.setDestroyMethodName("xxx")
 		if (this.destroyMethod != null) {
 			invokeCustomDestroyMethod(this.destroyMethod);
 		}
@@ -393,6 +399,8 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 	public static boolean hasApplicableProcessors(Object bean, List<DestructionAwareBeanPostProcessor> postProcessors) {
 		if (!CollectionUtils.isEmpty(postProcessors)) {
 			for (DestructionAwareBeanPostProcessor processor : postProcessors) {
+				// 是否需要被销毁
+				// 具体实现类：InitDestroyAnnotationBeanPostProcessor
 				if (processor.requiresDestruction(bean)) {
 					return true;
 				}

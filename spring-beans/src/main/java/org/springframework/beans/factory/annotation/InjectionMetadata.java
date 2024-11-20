@@ -173,6 +173,7 @@ public class InjectionMetadata {
 
 		protected final boolean isField;
 
+		// 包含 setter 方法属性的名字、类型
 		@Nullable
 		protected final PropertyDescriptor pd;
 
@@ -226,12 +227,14 @@ public class InjectionMetadata {
 		protected void inject(Object target, @Nullable String requestingBeanName, @Nullable PropertyValues pvs)
 				throws Throwable {
 
+			// 如果是字段
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
-				// ⭐️ 反射调用字段，通过 getResourceToInject 方法，去查找 bean
+				// ⭐️ 反射调用字段，通过 getResourceToInject 方法，去查找 bean，实现类是 ResourceElement
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
+			// 如果是方法
 			else {
 				if (checkPropertySkipping(pvs)) {
 					return;
@@ -239,7 +242,7 @@ public class InjectionMetadata {
 				try {
 					Method method = (Method) this.member;
 					ReflectionUtils.makeAccessible(method);
-					// 反射调用方法
+					// 反射调用方法，通过 getResourceToInject 方法，去查找 bean，实现类是 ResourceElement
 					method.invoke(target, getResourceToInject(target, requestingBeanName));
 				}
 				catch (InvocationTargetException ex) {
@@ -268,6 +271,7 @@ public class InjectionMetadata {
 					return skip;
 				}
 				if (this.pd != null) {
+					// ⭐️ 如果 pvs 中包含当前方法的属性描述器，则表示该属性程序员已经手动赋值，则跳过该属性
 					if (pvs.contains(this.pd.getName())) {
 						// Explicit value provided as part of the bean definition.
 						this.skip = true;

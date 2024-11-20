@@ -144,7 +144,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
 		// ⭐️ 先调用父类的 isAutowireCandidate，如果匹配成功，在执行下面的匹配
-		// 判断 autowireCandidate 属性 和 范型
+		// 判断 autowireCandidate 属性是否可以注入 和 范型是否匹配
 		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
 		if (match) {
 			// ⭐️ 判断 @Qualifier 注解
@@ -354,12 +354,12 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	@Override
 	@Nullable
 	public Object getSuggestedValue(DependencyDescriptor descriptor) {
-		// 获取字段上 @Value 注解，并返回值
+		// ⭐️ 获取字段上 @Value 注解，并返回值
 		Object value = findValue(descriptor.getAnnotations());
 		if (value == null) {
 			MethodParameter methodParam = descriptor.getMethodParameter();
 			if (methodParam != null) {
-				// 获取方法参数上 @Value 注解，并返回值
+				// ⭐️ 获取方法参数上 @Value 注解，并返回值
 				value = findValue(methodParam.getMethodAnnotations());
 			}
 		}

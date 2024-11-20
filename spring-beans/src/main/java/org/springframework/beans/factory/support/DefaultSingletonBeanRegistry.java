@@ -580,6 +580,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	public void destroySingleton(String beanName) {
 		// Remove a registered singleton of the given name, if any.
+		// 清空单例池
 		removeSingleton(beanName);
 
 		// Destroy the corresponding DisposableBean instance.
@@ -614,6 +615,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 			}
 			for (String dependentBeanName : dependencies) {
 				// 将所有被依赖的 bean 进行销毁，是一个递归调用，一样会执行 bean.destroy();
+				// 意思是：因为我都要被销毁了，既然你依赖了我，那你也没有存在的意义了
 				destroySingleton(dependentBeanName);
 			}
 		}

@@ -613,7 +613,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object exposedObject = bean;
 		try {
 			// ⭐️ 关键代码：【3、填充属性】，完成了循环依赖。也就是我们常常说的自动注入，这里面会完成 XML 中的自动装配和注解的注入
-			// 里面会完成【第五次】，【第六次】的后置处理器的调用
+			// 完成了【第五次】，【第六次】的后置处理器的调用
 			// ⭐️ 这里也会执行【实例化后】的方法调用
 			populateBean(beanName, mbd, instanceWrapper);
 
@@ -1533,6 +1533,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			pvs = newPvs;
 		}
 
+		// 是否有：InstantiationAwareBeanPostProcessor 类型的 BeanPostProcessor
+		// 默认会有：AutowiredAnnotationBeanPostProcessor 和 CommonAnnotationBeanPostProcessor
 		boolean hasInstAwareBpps = hasInstantiationAwareBeanPostProcessors();
 		boolean needsDepCheck = (mbd.getDependencyCheck() != AbstractBeanDefinition.DEPENDENCY_CHECK_NONE);
 
@@ -1572,6 +1574,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// ⭐️ 将 pvs 中的属性赋值到 bw 中
 		// 如果当前 bean 中到 BD 中设置了 propertyValues，那么会将 propertyValues 到值覆盖 @Autowired
+		// 从这里也可以说明，pvs 如果设置了值，则最终会使用 pvs 的值
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
@@ -1588,12 +1591,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	protected void autowireByName(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
-		// ⭐️ 获取所有含有 setter 方法的属性
+		// ⭐️ 获取所有含有 setter 方法去掉 set 前缀后的名字，同时会进行一些过滤，找到合适的属性
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			// 先检查容器中是否含有对应 propertyName 的 bean 对象，或者 BD
 			if (containsBean(propertyName)) {
 				Object bean = getBean(propertyName);
+				// ⭐️ 添加到 pvs 中，这里并没有真正的去赋值
 				pvs.add(propertyName, bean);
 				// 注册依赖关系 bean 之间的依赖关系
 				registerDependentBean(propertyName, beanName);
@@ -1631,7 +1635,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
-		// ⭐️ 找到所有符合条件的 setter 方法
+		// ⭐️ 获取所有含有 setter 方法去掉 set 前缀后的名字，同时会进行一些过滤，找到合适的属性
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			try {
@@ -1647,10 +1651,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					// ⭐️ 根据类型找到一个对象
 					Object autowiredArgument = resolveDependency(desc, beanName, autowiredBeanNames, converter);
 					if (autowiredArgument != null) {
-						// 加入 pvs
+						// ⭐️ 添加到 pvs 中，这里并没有真正的去赋值
 						pvs.add(propertyName, autowiredArgument);
 					}
 					for (String autowiredBeanName : autowiredBeanNames) {
+						// 注册依赖关系 bean 之间的依赖关系
 						registerDependentBean(autowiredBeanName, beanName);
 						if (logger.isTraceEnabled()) {
 							logger.trace("Autowiring by type from bean name '" + beanName + "' via property '" +
@@ -1679,19 +1684,24 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected String[] unsatisfiedNonSimpleProperties(AbstractBeanDefinition mbd, BeanWrapper bw) {
 		Set<String> result = new TreeSet<>();
 		PropertyValues pvs = mbd.getPropertyValues();
-		// 获取属性描述器，属性必须含有 setter 或 getter 方法
+		// 获取属性描述器，属性必须含有 setter 或 getter 方法，只要满足其一就会有一个 PropertyDescriptor
+		// 属性的 name 就是 setter 方法去掉 set 前缀后的名字
+		// 属性的 propertyType 就是 setter 方法参数的类型
+		// 属性的 writeMethod 就是 setter 方法
+		// 属性的 readMethod 就是 getter 方法
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
 
 		// ⭐️ 什么样的属性可以自动注入？
-		// 1. 该属性具有对应的 setter 方法
-		// 2. 没有在 ignoreDependencyTypes 中
-		// 3. 如果该属性对应的 setter 方法是实现的某个接口中所定义的，那个该接口没有在 ignoredDependencyInterfaces 中
-		// 4. 程序员没有手动在 BD 中设置同名的 propertyValues 值
-		// 5. 属性类型不是简单类型：如：int、Integer、String、int[]
+		// 1. pd.getWriteMethod() != null：该属性具有对应的 setter 方法
+		// 2. !isExcludedFromDependencyCheck(pd)：没有在 ignoreDependencyTypes 中
+		// 3. !isExcludedFromDependencyCheck(pd)：如果该属性对应的 setter 方法是实现的某个接口中所定义的，那个该接口没有在 ignoredDependencyInterfaces 中
+		// 4. !pvs.contains(pd.getName())：程序员没有手动在 BD 中设置同名的 propertyValues 值
+		// 5. !BeanUtils.isSimpleProperty(pd.getPropertyType())：属性类型不是简单类型：如：int、Integer、String、int[]
 		for (PropertyDescriptor pd : pds) {
 			// 必须要有 setter 方法 && 不是 ignoredDependencyInterfaces 中所定义的接口的 setter 方法
 			if (pd.getWriteMethod() != null && !isExcludedFromDependencyCheck(pd) && !pvs.contains(pd.getName()) &&
 					!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
+				// 加入 setter 方法去掉 set 前缀后的名字
 				result.add(pd.getName());
 			}
 		}

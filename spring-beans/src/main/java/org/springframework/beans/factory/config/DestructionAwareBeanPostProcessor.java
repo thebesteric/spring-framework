@@ -54,7 +54,7 @@ public interface DestructionAwareBeanPostProcessor extends BeanPostProcessor {
 	 * be called for this bean instance eventually, or {@code false} if not needed
 	 * @since 4.3
 	 */
-	// 实现该接口的 bean 是否需要被销毁，默认是 true
+	// 是否需要被销毁，默认是 true
 	default boolean requiresDestruction(Object bean) {
 		return true;
 	}
