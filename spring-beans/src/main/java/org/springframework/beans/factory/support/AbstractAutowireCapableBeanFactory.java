@@ -1212,7 +1212,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// 如果提供了 bd.setInstanceSupplier(UserService::new) 来实例化，那么直接就使用 InstanceSupplier 来实例化，而不再进行后续推断
-		// 如：ac.registerBean(User.class, User::new);
+		// 如：ctx.registerBean(User.class, User::new);
 		Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
 		if (instanceSupplier != null) {
 			return obtainFromSupplier(instanceSupplier, beanName);
@@ -1237,14 +1237,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Shortcut when re-creating the same bean...
 		// 重新创建 bean 的快速方式（针对 prototype）
-		// resolved 表示创建对象的构造方法没有被解析过
+		// resolved：表示创建对象的构造方法是否被解析过
 		// 一个原型 BeanDefinition，会多次来创建 bean，那么就可以把这个 BD 所需要的构造方法缓存起来，避免每次都要进行构造方法推断
 		boolean resolved = false;
 		boolean autowireNecessary = false;
-		// 如果 getBean 的时候没有指定参数
+		// 如果 getBean 的时候没有指定参数，才会缓存
 		if (args == null) {
 			synchronized (mbd.constructorArgumentLock) {
-				// 表示已经找到了构造方法或工厂方法
+				// 缓存：resolvedConstructorOrFactoryMethod：表示已经找到了构造方法或工厂方法，起到缓存的作用
 				// 当 prototype 第 N（N>1） 次进行 getBean 的时候，resolvedConstructorOrFactoryMethod != null
 				// 因为在 instantiateBean() 的时候会给 resolvedConstructorOrFactoryMethod 赋值
 				// 该 BD 是否已经决定了要使用的构造方法或工厂方法
@@ -1274,42 +1274,24 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/*
 		⭐️ 关键代码：第二次调用后置处理器，
 		开始推断构造方法：处理实现了 SmartInstantiationAwareBeanPostProcessor 接口的后置处理器 AutowiredAnnotationBeanPostProcessor
-
-		1、提供了一个构造方法，是无参构造方法：
-			ctors == null
-
-		2、提供了一个构造方法，不是无参构造方法：
-			ctors = 1，会使用提供的构造方法，因为可以只能使用这个构造方法
-
-		3、提供了多个合格的构造方法，包括无参构造方法：
-			ctors == null，会调用无参构造方法，因为 spring 不知道应该利用那个构造方法装配
-
-		4、提供了多个合格的构造方法，不含无参构造方法，且都没有将其标明 @Autowired，且注入模式是 no：
-			ctors == null，然后抛出异常：No default constructor found
-
-		5、提供了多个合格的构造方法，不含无参构造方法，且都没有将其标明 @Autowired，且注入模式是 byConstructor：
-			ctors == null，找到参数值最长的合理的构造方法
-
-		6、提供了多个合格的构造方法，不含无参构造方法，且都将其标明 @Autowired(required=false)：
-			ctors != null，找到参数值最长的合理的构造方法
-
-		7、提供了多个合格的构造方法，至少有一个标明了 @Autowired(required=false)
-			ctors != null，会继续推断使用哪一个构造方法，通常为第一个解析到的构造方法（这里会参数长度排序）
-
-		8、提供了多个合格的构造方法，至少有一个标明了 @Autowired(required=true) 和 @Autowired(required=false)
-			直接报异常：Invalid autowire-marked constructor
-
-		有多个 ctors 或 自动装配 的情况下：
-			继续推断使用哪一个构造方法
+		🏷️ 情况一：没有任何 @Autowired 注解
+		1、有多个构造方法：返回 null，ctors = null
+		2、只有一个有参数的构造方法：返回这个构造方法，ctors = 1
+		3、只有一个无参的构造方法：返回 null，ctors = null
+		🏷️ 情况二：存在 @Autowired 注解
+		1、只有一个 required = true 的构造方法：返回这个构造方法，ctors = 1
+		2、有多个 required = true 的构造方法：抛出异常
+		3、有一个 required = true 的构造方法，其他构造方法均为 false：抛出异常
+		4、有多个 required = false 的构造方法：返回所有 required = false 的构造方法，如果有无参，则加上无参构造方法，，ctors >= 1（这里会参数长度排序）
 		 */
 		// Candidate constructors for autowiring?
 		// ⭐️ 找出候选构造方法
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 
-		// 🏷️ 如果推断出 ctors != null：如果解析出来构造方法，就需要给构造方法的参数赋值，使用自动装配
-		// 🏷️ 如果指定了 AutowireMode = AUTOWIRE_CONSTRUCTOR：如果 BD 设置了构造方法注入模式，则也需要给构造方法赋值，使用自动装配
-		// 🏷️ 如果是通过 BD 明确给了构造方法的参数，即设置了 constructorArgumentValues，则也需要给构造方法注入值，值是手动指定的
-		// 🏷️ 如果调用 getBean 的时候，指定了参数，则也需要给构造方法注入值，值是手动指定的
+		// 🏷️ 如果推断出 ctors != null：如果解析出来构造方法，就需要给构造方法的参数赋值，使用自动装配；ctors != null，通常是多个构造方法
+		// 🏷️ 如果指定了 AutowireMode = AUTOWIRE_CONSTRUCTOR：如果 BD 设置了构造方法注入模式，则也需要给构造方法赋值，使用自动装配；bd.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
+		// 🏷️ 如果是通过 BD 明确给了构造方法的参数，即设置了 constructorArgumentValues，则也需要给构造方法注入值，值是手动指定的；bd.getConstructorArgumentValues().addGenericArgumentValue(new OrderService());
+		// 🏷️ 如果调用 getBean 的时候，指定了参数，则也需要给构造方法注入值，值是手动指定的；ctx.getBean(UserService.class);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
 			// ⭐️ 使用自动装配，则再次进行推断，并确定使用哪一个构造方法，并注入

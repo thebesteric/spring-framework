@@ -98,6 +98,9 @@ class ConstructorResolver {
 	public BeanWrapper autowireConstructor(String beanName, RootBeanDefinition mbd,
 			@Nullable Constructor<?>[] chosenCtors, @Nullable Object[] explicitArgs) {
 
+		// chosenCtors：可选择的构造方法
+		// explicitArgs：程序员指定的参数，通过 getBean(xxx.class, arg1, arg2, ...) 传递的参数
+
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
 
@@ -126,13 +129,13 @@ class ConstructorResolver {
 					argsToUse = mbd.resolvedConstructorArguments;
 					if (argsToUse == null) {
 						// preparedConstructorArguments：表示预先通过 BD 设置的原始值
+						// 比如：bd.getConstructorArgumentValues().addGenericArgumentValue(new RuntimeBeanReference("orderService"));
 						argsToResolve = mbd.preparedConstructorArguments;
 					}
 				}
 			}
 			if (argsToResolve != null) {
 				// ⭐️ 解析预先设置的参数值，如：通过 BD 指定的参数
-				// ⌨️ beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(new RuntimeBeanReference("orderService"));
 				argsToUse = resolvePreparedArguments(beanName, mbd, bw, constructorToUse, argsToResolve);
 			}
 		}
@@ -143,7 +146,7 @@ class ConstructorResolver {
 			// Take specified constructors, if any.
 			Constructor<?>[] candidates = chosenCtors;
 
-			// 如果没有构造方法，那么就通过 beanClass 获取所有的构造方法，作为候选者
+			// ⭐️ 如果没有构造方法，那么就通过 beanClass 获取所有的构造方法，作为候选者
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
@@ -189,7 +192,7 @@ class ConstructorResolver {
 				minNrOfArgs = explicitArgs.length;
 			}
 			else {
-				// 处理通过 BD 指定了构造方法参数值，因为可能是通过下标值指定的
+				// 处理通过 BD 指定了构造方法参数值，因为可能是通过下标值指定的，如果没有指定参数，那么就是 0
 				// ⌨️ 如：bd.getConstructorArgumentValues().addIndexedArgumentValue(1, xxx);
 				// 虽然只是指定了一个值，但是 index = 1，表示至少有 2 个参数
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
@@ -245,7 +248,7 @@ class ConstructorResolver {
 								paramNames = pnd.getParameterNames(candidate);
 							}
 						}
-						// ⭐️ 根据参数类型、参数名称找到对应的 bean 对象
+						// ⭐️⭐️⭐️ 根据参数类型、参数名称找到对应的 bean 对象
 						argsHolder = createArgumentArray(beanName, mbd, resolvedValues, bw, paramTypes, paramNames,
 								getUserDeclaredConstructor(candidate), autowiring, candidates.length == 1);
 					}
@@ -274,12 +277,12 @@ class ConstructorResolver {
 				// 到这里已经找到构造方法对应到参数值了
 
 				// ⭐️ 根据参数类型和找到到参数对象计算权重，值越小越匹配
-				// Lenient 代表宽松模式：父类 + 2 分，接口 + 1 分
+				// Lenient 代表宽松模式：有父类 + 2 分，有接口 + 1 分
 				int typeDiffWeight = (mbd.isLenientConstructorResolution() ?
 						argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
 
 				// Choose this constructor if it represents the closest match.
-				// 分数越小越匹配
+				// ⭐️ 分数越小越匹配
 				if (typeDiffWeight < minTypeDiffWeight) {
 					constructorToUse = candidate;
 					argsHolderToUse = argsHolder;
@@ -808,7 +811,7 @@ class ConstructorResolver {
 			ConstructorArgumentValues.ValueHolder valueHolder = null;
 			// 如果在 BD 中指定了参数值，那么就直接用 BD 中指定的值
 			if (resolvedValues != null) {
-				// 是否通过下标指定了参数值
+				// 是否通过下标指定了参数值：如：bd.getConstructorArgumentValues().addIndexedArgumentValue(1, new OrderService());
 				valueHolder = resolvedValues.getArgumentValue(paramIndex, paramType, paramName, usedValueHolders);
 				// If we couldn't find a direct match and are not supposed to autowire,
 				// let's try the next generic, untyped argument value as fallback:
@@ -880,7 +883,7 @@ class ConstructorResolver {
 			}
 		}
 
-		// 注册该 bean 所依赖的其他 beanName
+		// 注册该 bean 的依赖关系
 		for (String autowiredBeanName : autowiredBeanNames) {
 			this.beanFactory.registerDependentBean(autowiredBeanName, beanName);
 			if (logger.isDebugEnabled()) {
@@ -971,6 +974,7 @@ class ConstructorResolver {
 			return injectionPoint;
 		}
 		try {
+			// ⭐️ 先根据类型，在根据名字找 bean
 			return this.beanFactory.resolveDependency(
 					new DependencyDescriptor(param, true), beanName, autowiredBeanNames, typeConverter);
 		}

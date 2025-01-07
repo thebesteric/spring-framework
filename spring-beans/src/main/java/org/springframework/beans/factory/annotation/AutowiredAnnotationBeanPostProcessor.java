@@ -251,7 +251,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				try {
 					Class<?> targetClass = beanClass;
 					do {
-						// ⭐️ 寻找 targetClass 中的方法，哪勰上有 @Lookup 注解
+						// ⭐️ 寻找 targetClass 中的方法，哪些方法上有 @Lookup 注解
 						ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 							Lookup lookup = method.getAnnotation(Lookup.class);
 							if (lookup != null) {
@@ -289,12 +289,13 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
 			synchronized (this.candidateConstructorsCache) {
+				// 先看缓存中有没有，有就直接拿出来用
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 				// DCL
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
 					try {
-						// 拿到所有的构造方法（原生构造方法）
+						// ⭐️ 【第一步】：拿到所有的构造方法（原生构造方法）
 						rawCandidates = beanClass.getDeclaredConstructors();
 					}
 					catch (Throwable ex) {
@@ -313,20 +314,24 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					// Kotlin 相关，可以忽略：推断主要的构造方法委托给 Kotlin，如果对于 Java 类，永远返回 null
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
 
-					// 定义一个变量记录非合成的构造方法
+					// 与 kotlin 相关：定义一个变量记录非合成的构造方法
 					int nonSyntheticConstructors = 0;
+
+					// ♻️ 开始循环构造方法
 					for (Constructor<?> candidate : rawCandidates) {
+						// 与 kotlin 相关
 						if (!candidate.isSynthetic()) {
 							nonSyntheticConstructors++;
 						}
 						else if (primaryConstructor != null) {
 							continue;
 						}
-						// 检查构造方法上有没有 @Autowired 注解，并拿出 注解上的 属性
+
+						// ⭐️ 【第二步】：检查构造方法上有没有 @Autowired 注解，并拿出 注解上的 属性
 						MergedAnnotation<?> ann = findAutowiredAnnotation(candidate);
 						// 🏷️ 没有 @Autowired 注解的情况
 						if (ann == null) {
-							// 看看 beanClass 是否是 CGLIB 代理类，并且是否有父类
+							// 看看 beanClass 是否是 CGLIB 代理类，并且获取其父类，就是被代理的类
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
 							if (userClass != beanClass) {
 								try {
@@ -340,6 +345,8 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								}
 							}
 						}
+
+						// ⭐️ 【第三步】：找到 requiredConstructor 或 defaultConstructor 构造方法
 						// 🏷️ 有 @Autowired 注解的情况
 						if (ann != null) {
 							// ⭐️ 如果发现 requiredConstructor != null，则表示又出现了 @Autowired 的构造方法（无论 true 还是 false），抛异常
@@ -418,7 +425,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					}
 					// 其他的情况，返回一个空集合
 					else {
-						// 如，提供了一个无参的构造方法，那么就会返回一个 null 数组
+						// 如，提供了一个无参的构造方法，那么就一个数量为 0 点数组，后续会把这个数组转为 null
 						candidateConstructors = new Constructor<?>[0];
 					}
 					// 将推断出来的构造方法存起来
@@ -426,6 +433,15 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				}
 			}
 		}
+
+		// ⭐️ 总结一下：candidateConstructors 里面的记录信息
+		// 情况一：如果有 @Autowired 注解的构造方法，那么
+		// 如果 required = true 的构造方法只有一个，那么 candidateConstructors 里面只有一个元素
+		// 如果 required = false 的构造方法有多个，那么 candidateConstructors 里面会有多个元素（提供了无参构造方法，那么 candidates 也会把无参构造方法加入到里面）
+		// 情况二：没有任何 @Autowired 注解的构造方法，那么
+		// 如果只有一个有参的构造方法（没有其他任何构造方法），那么 candidateConstructors 里面只有一个元素
+		// 如果只有一个无参的构造方法，那么 candidateConstructors 为 null
+
 		// ⭐️ 返回多个构造方法的情况是：有多个 @Autowired(required=false)，才会成立
 		return (candidateConstructors.length > 0 ? candidateConstructors : null);
 	}

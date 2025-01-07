@@ -17,7 +17,7 @@ public class App {
 		beanDefinition.setBeanClass(TestService.class);
 		// beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(new OrderService());
 		// beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(new OrderService());
-		// beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(new RuntimeBeanReference("orderService"));
+		// beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(new RuntimeBeanReference("orderService")); // getBean("orderService")
 		// beanDefinition.getConstructorArgumentValues().addIndexedArgumentValue(1, new OrderService());
 		beanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 		// beanDefinition.setLenientConstructorResolution(false);
